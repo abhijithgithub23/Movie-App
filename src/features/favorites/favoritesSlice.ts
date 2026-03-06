@@ -1,4 +1,3 @@
-// ✅ Correct pattern
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'; // runtime
 import type { PayloadAction } from '@reduxjs/toolkit';              // type-only
 import type { Media } from '../../types';                           // type-only
