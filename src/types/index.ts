@@ -1,14 +1,22 @@
-export interface Media {
-  id: number | string; // string for custom local ids
+export type Media = {
+  id: number;
+  media_type?: 'movie' | 'tv';
   title?: string;
-  name?: string; // TMDB uses 'name' for TV shows
-  overview: string;
-  poster_path: string;
-  media_type: 'movie' | 'tv';
-  genre_ids: number[];
-  isCustom?: boolean; // Flag to identify user-added media
-  tagline?: string;   // <-- Add this optional
-}
+  name?: string;
+  overview?: string;
+  poster_path?: string;
+  backdrop_path?: string;
+  tagline?: string;
+  first_air_date?: string;
+  release_date?: string;
+  genres?: { id: number; name: string }[];
+  vote_average?: number;
+  vote_count?: number;
+  original_language?: string;
+  origin_country?: string[];
+  adult?: boolean;
+  popularity?: number;
+};
 
 export interface UserState {
   isAdmin: boolean;
