@@ -26,9 +26,10 @@ const AddMedia = () => {
     e.preventDefault();
 
     const newMedia: Media = {
-      id: Date.now(),
+      id: Date.now(),   
       ...formData,
-      genre_ids: [], // Add genre selection logic if needed
+      genres: [],
+       // Add genre selection logic if needed
     };
 
     dispatch(addMedia(newMedia));

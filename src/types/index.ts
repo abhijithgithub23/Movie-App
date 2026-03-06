@@ -1,5 +1,5 @@
 export type Media = {
-  id: number;
+   id: number | string;
   media_type?: 'movie' | 'tv';
   title?: string;
   name?: string;
