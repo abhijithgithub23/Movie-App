@@ -3,16 +3,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { editMedia } from '../features/media/mediaSlice';
 import { useNavigate, useParams } from 'react-router-dom';
 import { tmdbApi } from '../api/tmdb';
-import type { RootState } from '../store/store';
+import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 
 const EditMedia = () => {
   const { id, type } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
-  const favorites = useSelector((state: RootState) => state.favorites.items) as Media[];
-  const trending = useSelector((state: RootState) => state.media.trending) as Media[];
+  const favorites = useSelector((state: RootState) => state.favorites.items);
+  const trending = useSelector((state: RootState) => state.media.trending);
 
   const [media, setMedia] = useState<Media | null>(null);
   const [formData, setFormData] = useState<Partial<Media>>({
@@ -66,7 +66,8 @@ const EditMedia = () => {
       name: formData.media_type === 'tv' ? formData.title : undefined,
     };
 
-    dispatch(editMedia(updatedMedia));
+    // ✅ Correct dispatch with payload
+    dispatch(editMedia({ media: updatedMedia, type: type as 'trending' | 'movies' | 'tvShows' }));
     navigate(`/details/${type}/${media.id}`);
   };
 

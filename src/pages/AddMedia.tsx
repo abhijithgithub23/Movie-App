@@ -14,7 +14,6 @@ type FormData = {
 const AddMedia = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState<FormData>({
     title: '',
     overview: '',
@@ -24,15 +23,18 @@ const AddMedia = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     const newMedia: Media = {
-      id: Date.now(),   
+      id: Date.now(),
       ...formData,
       genres: [],
-       // Add genre selection logic if needed
     };
 
-    dispatch(addMedia(newMedia));
+    dispatch(
+      addMedia({
+        media: newMedia,
+        type: formData.media_type === 'movie' ? 'movies' : 'tvShows',
+      })
+    );
     navigate('/');
   };
 
@@ -40,11 +42,7 @@ const AddMedia = () => {
     <div className="max-w-2xl mx-auto bg-gray-800 p-8 rounded-lg shadow-lg mt-10">
       <h2 className="text-3xl font-bold mb-6 text-indigo-400">Add New Media</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        
-        {/* Title */}
-        <label htmlFor="media-title" className="text-white font-semibold">
-          Title or Name
-        </label>
+        <label htmlFor="media-title" className="text-white font-semibold">Title or Name</label>
         <input
           id="media-title"
           type="text"
@@ -52,13 +50,9 @@ const AddMedia = () => {
           required
           className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={formData.title}
-          onChange={e => setFormData({ ...formData, title: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
         />
-
-        {/* Overview */}
-        <label htmlFor="media-overview" className="text-white font-semibold">
-          Overview / Description
-        </label>
+        <label htmlFor="media-overview" className="text-white font-semibold">Overview / Description</label>
         <textarea
           id="media-overview"
           placeholder="Overview / Description"
@@ -66,13 +60,9 @@ const AddMedia = () => {
           rows={4}
           className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={formData.overview}
-          onChange={e => setFormData({ ...formData, overview: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
         />
-
-        {/* Poster Path */}
-        <label htmlFor="media-poster" className="text-white font-semibold">
-          Poster Image URL
-        </label>
+        <label htmlFor="media-poster" className="text-white font-semibold">Poster Image URL</label>
         <input
           id="media-poster"
           type="text"
@@ -80,26 +70,20 @@ const AddMedia = () => {
           required
           className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
           value={formData.poster_path}
-          onChange={e => setFormData({ ...formData, poster_path: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, poster_path: e.target.value })}
         />
-
-        {/* Media Type */}
-        <label htmlFor="media-type" className="text-white font-semibold">
-          Media Type
-        </label>
+        <label htmlFor="media-type" className="text-white font-semibold">Media Type</label>
         <select
           id="media-type"
           className="p-3 bg-gray-700 text-white rounded focus:outline-none"
           value={formData.media_type}
-          onChange={e =>
+          onChange={(e) =>
             setFormData({ ...formData, media_type: e.target.value as 'movie' | 'tv' })
           }
         >
           <option value="movie">Movie</option>
           <option value="tv">TV Show</option>
         </select>
-
-        {/* Submit */}
         <button
           type="submit"
           className="bg-indigo-600 py-3 rounded font-bold hover:bg-indigo-700 transition"

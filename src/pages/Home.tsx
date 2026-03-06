@@ -7,7 +7,8 @@ import { useNavigate } from 'react-router-dom';
 const Home = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { trending, status } = useSelector((state: RootState) => state.media);
+  const trending = useSelector((state: RootState) => state.media.trending);
+  const status = useSelector((state: RootState) => state.media.status.trending);
 
   useEffect(() => {
     if (status === 'idle') {

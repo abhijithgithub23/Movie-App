@@ -1,3 +1,4 @@
+// src/pages/Details.tsx
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -5,43 +6,47 @@ import { tmdbApi } from '../api/tmdb';
 import { toggleFavorite } from '../features/favorites/favoritesSlice';
 import { deleteMedia } from '../features/media/mediaSlice';
 import { useAuth0 } from '@auth0/auth0-react';
-import type { RootState } from '../store/store';
+import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 
 const Details = () => {
   const { id: paramId, type: paramType } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth0();
   const isAdmin = user?.email === 'abhijithksd23@gmail.com';
 
   const id = paramId || '';
   const type = paramType || '';
 
-  const favorites = useSelector((state: RootState) => state.favorites.items) as Media[];
-  const trending = useSelector((state: RootState) => state.media.trending) as Media[];
+  const favorites = useSelector((state: RootState) => state.favorites.items);
+  const trending = useSelector((state: RootState) => state.media.trending);
 
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
 
   // Combine Redux + TMDB
   const media = useMemo<Media | null>(() => {
     if (!id) return null;
-    const custom = favorites.find(m => String(m.id) === id);
-    const reduxTrending = trending.find(m => String(m.id) === id);
+    const custom = favorites.find((m) => String(m.id) === id);
+    const reduxTrending = trending.find((m) => String(m.id) === id);
     return custom || reduxTrending || tmdbMedia;
   }, [id, favorites, trending, tmdbMedia]);
 
   useEffect(() => {
     if (!id || !type) return;
 
-    if (!id.startsWith('custom') && !trending.find(m => String(m.id) === id)) {
+    // Fetch from TMDB if not custom and not in trending
+    if (!id.startsWith('custom') && !trending.find((m) => String(m.id) === id)) {
       let canceled = false;
-      tmdbApi.get<Media>(`/${type}/${id}`)
-        .then(res => {
+      tmdbApi
+        .get<Media>(`/${type}/${id}`)
+        .then((res) => {
           if (!canceled) setTmdbMedia(res.data);
         })
         .catch(() => navigate('/'));
-      return () => { canceled = true; };
+      return () => {
+        canceled = true;
+      };
     }
   }, [id, type, trending, navigate]);
 
@@ -63,7 +68,7 @@ const Details = () => {
     ? `https://image.tmdb.org/t/p/original${media.backdrop_path}`
     : null;
 
-  const isFavorite = favorites.some(item => String(item.id) === id);
+  const isFavorite = favorites.some((item) => String(item.id) === id);
 
   return (
     <div className="relative text-white min-h-screen">
@@ -90,30 +95,45 @@ const Details = () => {
           <p className="text-lg leading-relaxed">{media.overview}</p>
 
           {media.genres && (
-            <p><strong>Genres:</strong> {media.genres.map(g => g.name).join(', ')}</p>
+            <p>
+              <strong>Genres:</strong> {media.genres.map((g) => g.name).join(', ')}
+            </p>
           )}
 
           {(media.release_date || media.first_air_date) && (
-            <p><strong>Release Date:</strong> {media.release_date || media.first_air_date}</p>
+            <p>
+              <strong>Release Date:</strong> {media.release_date || media.first_air_date}
+            </p>
           )}
 
           {media.original_language && (
-            <p><strong>Language:</strong> {media.original_language.toUpperCase()}</p>
+            <p>
+              <strong>Language:</strong> {media.original_language.toUpperCase()}
+            </p>
           )}
 
           {media.origin_country && media.origin_country.length > 0 && (
-            <p><strong>Country:</strong> {media.origin_country.join(', ')}</p>
+            <p>
+              <strong>Country:</strong> {media.origin_country.join(', ')}
+            </p>
           )}
 
           {media.popularity && <p><strong>Popularity:</strong> {media.popularity}</p>}
           {media.vote_average !== undefined && (
-            <p><strong>Vote:</strong> {media.vote_average} ({media.vote_count} votes)</p>
+            <p>
+              <strong>Vote:</strong> {media.vote_average} ({media.vote_count} votes)
+            </p>
           )}
 
           <div className="flex gap-4 flex-wrap mt-4">
             <button
               onClick={() =>
-                dispatch(toggleFavorite({ ...media, media_type: media.media_type || (type as 'movie' | 'tv') }))
+                dispatch(
+                  toggleFavorite({
+                    ...media,
+                    media_type: media.media_type || (type as 'movie' | 'tv'),
+                  })
+                )
               }
               className={`px-6 py-3 rounded font-bold shadow-lg transition ${
                 isFavorite ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
@@ -133,7 +153,12 @@ const Details = () => {
 
                 <button
                   onClick={() => {
-                    dispatch(deleteMedia(media.id));
+                    dispatch(
+                      deleteMedia({
+                        id: media.id,
+                        type: type as 'trending' | 'movies' | 'tvShows',
+                      })
+                    );
                     navigate('/');
                   }}
                   className="px-6 py-3 rounded font-bold shadow-lg bg-red-600 hover:bg-red-700 transition"
