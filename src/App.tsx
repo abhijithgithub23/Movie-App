@@ -32,10 +32,7 @@ function App() {
               path="/admin/add" 
               element={<AuthGuard requireAdmin={true}><AddMedia /></AuthGuard>} 
             />
-            <Route 
-              path="/admin/edit/:id" 
-              element={<AuthGuard requireAdmin={true}><EditMedia /></AuthGuard>} 
-            />
+           <Route path="/admin/edit/:type/:id" element={<AuthGuard requireAdmin={true}><EditMedia /></AuthGuard>} />
           </Routes>
         </main>
       </div>

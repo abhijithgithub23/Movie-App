@@ -34,7 +34,7 @@ const EditMedia = () => {
           found = res.data;
         } catch (err) {
           console.error('Failed to fetch media', err);
-          navigate('/'); // fallback
+          navigate('/');
           return;
         }
       }
@@ -51,7 +51,9 @@ const EditMedia = () => {
     fetchMedia();
   }, [id, type, favorites, trending, navigate]);
 
-  if (!media) return <div className="text-white flex justify-center items-center h-screen">Loading...</div>;
+  if (!media) {
+    return <div className="text-white flex justify-center items-center h-screen">Loading...</div>;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
