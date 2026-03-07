@@ -18,7 +18,9 @@ export const tmdbApi = axios.create({
 
 // Helper functions
 export const fetchTrending = () => tmdbApi.get('/trending/all/day');
+
 export const searchMedia = (query: string) => tmdbApi.get('/search/multi', { params: { query } });
+
 export const fetchDetails = (type: 'movie' | 'tv', id: number | string) =>
   tmdbApi.get(`/${type}/${id}`);
 

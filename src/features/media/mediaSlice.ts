@@ -43,6 +43,7 @@ export const searchMediaThunk = createAsyncThunk<Media[], string>(
   'media/searchMedia',
   async (query) => {
     const res = await tmdbApi.get('/search/multi', { params: { query } });
+    console.log("Search Results: ", res.data.results);
     return res.data.results;
   }
 );
