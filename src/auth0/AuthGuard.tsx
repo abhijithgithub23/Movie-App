@@ -21,5 +21,5 @@ export const AuthGuard = ({ children, requireAdmin = false }: Props) => {
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>; // wrap in fragment to satisfy JSX
+  return <>{children}</>; 
 };

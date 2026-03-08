@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getTVShows } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
-import MediaCard from '../components/Layout/MediaCard';
+import MediaCard from '../components/Media/MediaCard';
 
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();

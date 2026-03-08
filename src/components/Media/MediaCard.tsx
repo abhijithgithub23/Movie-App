@@ -35,7 +35,14 @@ const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
             Edit
           </Link>
           <button 
-            onClick={() => dispatch(deleteMedia(media.id))}
+            onClick={() =>
+              dispatch(
+                deleteMedia({
+                  id: media.id,
+                  type: mediaType === "tv" ? "tvShows" : "movies"
+                })
+              )
+            }
             className="text-xs bg-red-600 px-3 py-2 rounded text-white font-bold hover:bg-red-700 w-full"
           >
             Delete
@@ -46,4 +53,4 @@ const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
   );
 };
 
-export default MediaCard;
+export default MediaCard;  

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthGuard } from './components/Layout/AuthGuard';
+import { AuthGuard } from './auth0/AuthGuard';
 import Navbar from './components/Layout/Navbar';
 
 // Page Imports

@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import type { Media } from '../types';
-import MediaCard from '../components/Layout/MediaCard';
+import MediaCard from '../components/Media/MediaCard';
 
 const Favorites = () => {
   const favorites = useSelector((state: RootState) => state.favorites.items) as Media[];

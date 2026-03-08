@@ -18,7 +18,7 @@ const EditMedia = () => {
   const [formData, setFormData] = useState<Partial<Media>>({
     title: '',
     overview: '',
-    poster_path: '',
+    poster_path: '',  
     media_type: 'movie',
   });
 
@@ -99,10 +99,17 @@ const EditMedia = () => {
           value={formData.poster_path || ''}
           onChange={e => setFormData({ ...formData, poster_path: e.target.value })}
         />
+        <label htmlFor="mediaType" className="text-white font-semibold">
+          Media Type
+        </label>
+
         <select
+          id="mediaType"
           className="p-3 bg-gray-700 text-white rounded outline-none"
           value={formData.media_type}
-          onChange={e => setFormData({ ...formData, media_type: e.target.value as 'movie' | 'tv' })}
+          onChange={e =>
+            setFormData({ ...formData, media_type: e.target.value as 'movie' | 'tv' })
+          }
         >
           <option value="movie">Movie</option>
           <option value="tv">TV Show</option>

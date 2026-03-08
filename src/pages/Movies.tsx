@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMovies } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
-import MediaCard from '../components/Layout/MediaCard';
+import MediaCard from '../components/Media/MediaCard';
 
 const Movies = () => {
   const dispatch = useDispatch<AppDispatch>(); // ✅ Typed dispatch
