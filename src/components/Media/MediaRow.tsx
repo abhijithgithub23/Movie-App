@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
+import { useNavigate } from "react-router-dom";
 import type { Media } from "../../types";
 
 interface MediaRowProps {
@@ -9,7 +9,7 @@ interface MediaRowProps {
 
 const MediaRow = ({ title, media }: MediaRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate(); // 2. Initialize navigate
+  const navigate = useNavigate();
 
   const scroll = (direction: "left" | "right") => {
     if (!rowRef.current) return;
@@ -18,22 +18,21 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
     rowRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };
 
-  // 3. Navigation handler
   const handleNavigation = (item: Media) => {
-    // Determine type: use item.media_type if available, otherwise fallback based on properties
     const type = item.media_type || (item.title ? "movie" : "tv");
     navigate(`/details/${type}/${item.id}`);
   };
 
   return (
     <div className="relative">
-      <h2 className="text-2xl font-bold mb-4">{title}</h2>
+      {/* Row title (Trending Now, etc) */}
+      <h2 className="text-2xl font-bold mb-4 mt-8">{title}</h2>
 
-      <div className="relative group">
+      <div className="relative group/row">
         {/* Left Arrow */}
         <button
           onClick={() => scroll("left")}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full opacity-0 group-hover/row:opacity-100 transition-opacity shadow-lg"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -43,7 +42,7 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
         {/* Right Arrow */}
         <button
           onClick={() => scroll("right")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full opacity-0 group-hover/row:opacity-100 transition-opacity shadow-lg"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -57,9 +56,11 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
           {media.map((m) => (
             <div
               key={m.id}
-              onClick={() => handleNavigation(m)} // 4. Add the click handler here
-              className="flex-shrink-0 w-40 md:w-48 lg:w-56 snap-start cursor-pointer"
+              onClick={() => handleNavigation(m)}
+              /* Added 'group' here so we can target the title inside on hover */
+              className="group flex-shrink-0 w-40 md:w-48 lg:w-56 snap-start cursor-pointer"
             >
+              {/* Image Wrapper */}
               <div className="relative overflow-hidden rounded-lg h-[250px] md:h-[300px] lg:h-[350px] transform transition-transform duration-300 hover:scale-105">
                 <img
                   src={
@@ -71,7 +72,15 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h3 className="mt-2 text-sm md:text-base truncate">{m.title || m.name}</h3>
+
+              {/* UPDATED TITLE:
+                  1. 'text-center' centers the text relative to the card.
+                  2. 'opacity-0 group-hover:opacity-100' hides it until hover.
+                  3. 'transition-opacity' makes the appearance smooth.
+              */}
+              <h3 className="mt-6 text-sm md:text-base text-center truncate px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium">
+                {m.title || m.name}
+              </h3>
             </div>
           ))}
         </div>
@@ -79,5 +88,6 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
     </div>
   );
 };
+
 
 export default MediaRow;
