@@ -1,56 +1,80 @@
-import { NavLink } from 'react-router-dom';
-import { useAuth0 } from '@auth0/auth0-react';
-import { useState } from 'react';
+import { NavLink } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useState } from "react";
 
 const Navbar = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
   const [isOpen, setIsOpen] = useState(false);
-  const isAdmin = user?.email === 'abhijithksd23@gmail.com';
+  const isAdmin = user?.email === "abhijithksd23@gmail.com";
 
-  const linkClasses = (isActive: boolean) =>
-    `block py-2 px-3 rounded ${
-      isActive ? 'text-white bg-gray-700' : 'text-gray-300 hover:text-white'
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `text-sm font-medium transition ${
+      isActive ? "text-white" : "text-gray-300 hover:text-white"
     }`;
 
   return (
-    <nav className="bg-gray-800 p-4 sticky top-0 z-50 shadow-md">
-      <div className="container mx-auto flex justify-between items-center">
-        <NavLink to="/" className="text-2xl font-bold text-indigo-500">CineApp</NavLink>
+    <nav className="fixed top-0 w-full z-50 bg-black/60 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
 
-        <button className="md:hidden text-white" onClick={() => setIsOpen(!isOpen)}>
-          ☰
-        </button>
+        {/* Logo */}
+        <NavLink to="/" className="text-3xl font-bold text-red-600">
+          CineApp
+        </NavLink>
 
-        <div className={`${isOpen ? 'block' : 'hidden'} absolute top-16 left-0 w-full bg-gray-800 md:static md:flex md:w-auto md:gap-6 p-4 md:p-0`}>
-          <NavLink to="/" className={({ isActive }) => linkClasses(isActive)}>Home</NavLink>
-          <NavLink to="/movies" className={({ isActive }) => linkClasses(isActive)}>Movies</NavLink>
-          <NavLink to="/tv" className={({ isActive }) => linkClasses(isActive)}>TV Shows</NavLink>
-          <NavLink to="/search" className={({ isActive }) => linkClasses(isActive)}>Search</NavLink>
-          <NavLink to="/favorites" className={({ isActive }) => linkClasses(isActive)}>Favorites</NavLink>
+        {/* Desktop Menu */}
+        <div className="hidden md:flex gap-6 items-center">
+          <NavLink to="/" className={linkClass}>Home</NavLink>
+          <NavLink to="/movies" className={linkClass}>Movies</NavLink>
+          <NavLink to="/tv" className={linkClass}>TV Shows</NavLink>
+          <NavLink to="/search" className={linkClass}>Search</NavLink>
+          <NavLink to="/favorites" className={linkClass}>Favorites</NavLink>
 
           {isAdmin && (
-            <NavLink to="/admin/add" className="block py-2 text-yellow-400 font-bold hover:text-yellow-300">
+            <NavLink
+              to="/admin/add"
+              className="text-yellow-400 font-semibold hover:text-yellow-300"
+            >
               + Add Media
             </NavLink>
           )}
 
           {isAuthenticated ? (
-            <button 
-              onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-              className="mt-2 md:mt-0 bg-red-600 px-4 py-2 rounded text-white hover:bg-red-700 w-full md:w-auto"
+            <button
+              onClick={() =>
+                logout({ logoutParams: { returnTo: window.location.origin } })
+              }
+              className="bg-red-600 px-4 py-1 rounded hover:bg-red-700"
             >
               Logout
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => loginWithRedirect()}
-              className="mt-2 md:mt-0 bg-indigo-600 px-4 py-2 rounded text-white hover:bg-indigo-700 w-full md:w-auto"
+              className="bg-white text-black px-4 py-1 rounded font-semibold hover:bg-gray-200"
             >
               Login
             </button>
           )}
         </div>
+
+        {/* Mobile */}
+        <button
+          className="md:hidden text-white"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          ☰
+        </button>
       </div>
+
+      {isOpen && (
+        <div className="md:hidden bg-black px-6 pb-4 flex flex-col gap-3">
+          <NavLink to="/" className={linkClass}>Home</NavLink>
+          <NavLink to="/movies" className={linkClass}>Movies</NavLink>
+          <NavLink to="/tv" className={linkClass}>TV Shows</NavLink>
+          <NavLink to="/search" className={linkClass}>Search</NavLink>
+          <NavLink to="/favorites" className={linkClass}>Favorites</NavLink>
+        </div>
+      )}
     </nav>
   );
 };

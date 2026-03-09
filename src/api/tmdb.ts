@@ -24,19 +24,19 @@ export const searchMedia = (query: string) => tmdbApi.get('/search/multi', { par
 export const fetchDetails = (type: 'movie' | 'tv', id: number | string) =>
   tmdbApi.get(`/${type}/${id}`);
 
-// async function testTMDB() {
-//   try {
-//     const trending = await fetchTrending();
-//     console.log('Trending:', trending.data); // THIS shows the raw object
+async function testTMDB() {
+  try {
+    const trending = await fetchTrending();
+    console.log('Trending:', trending.data); // THIS shows the raw object
 
-//     const search = await searchMedia('Inception');
-//     console.log('Search:', search.data);
+    const search = await searchMedia('Inception');
+    console.log('Search:', search.data);
 
-//     const details = await fetchDetails('movie', 550); // e.g., Fight Club
-//     console.log('Details:', details.data);
-//   } catch (error) {
-//     console.error('API error:', error);
-//   }
-// }
+    const details = await fetchDetails('movie', 550); // e.g., Fight Club
+    console.log('Details:', details.data);
+  } catch (error) {
+    console.error('API error:', error);
+  }
+}
 
-// testTMDB();
+testTMDB();
