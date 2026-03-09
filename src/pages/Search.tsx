@@ -30,6 +30,8 @@ const Search = () => {
     ? searchResults.filter((m) => m.genres?.some((g) => g.id === selectedGenre))
     : searchResults;
 
+  console.log('Search results:', searchResults);
+
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* <aside className="w-full md:w-64 bg-gray-800 p-4 rounded-lg h-fit">
@@ -77,6 +79,11 @@ const Search = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredResults
             .filter((m) => m.media_type === "movie" || m.media_type === "tv")
+            .sort((a, b) => {
+              const dateA = new Date(a.release_date || a.first_air_date || 0).getTime();
+              const dateB = new Date(b.release_date || b.first_air_date || 0).getTime();
+              return dateB - dateA; // latest first
+            })
             .map((m) => (
               <Link
                 to={`/details/${m.media_type || 'movie'}/${m.id}`}
