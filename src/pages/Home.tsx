@@ -56,7 +56,7 @@ const Home = () => {
   const totalSlides = Math.min(trending.length, 6);
 
   return (
-    <div className="bg-black text-white min-h-screen pt-3">
+    <div className="bg-black text-white min-h-screen pt-2">
       {/* HERO SECTION */}
       <div className="relative h-[75vh] overflow-hidden">
         {trending.slice(0, 6).map((item, i) => {
