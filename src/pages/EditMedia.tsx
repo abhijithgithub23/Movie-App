@@ -13,6 +13,9 @@ const EditMedia = () => {
 
   const favorites = useSelector((state: RootState) => state.favorites.items);
   const trending = useSelector((state: RootState) => state.media.trending);
+  const movies = useSelector((state: RootState) => state.media.movies); // Added
+  const tvShows = useSelector((state: RootState) => state.media.tvShows); // Added
+  const customMovies = useSelector((state: RootState) => state.media.customMovies);
 
   const [media, setMedia] = useState<Media | null>(null);
   const [formData, setFormData] = useState<Partial<Media>>({
@@ -26,11 +29,28 @@ const EditMedia = () => {
     if (!id || !type) return;
 
     const fetchMedia = async () => {
-      let found =
+      // Expanded to search all relevant arrays
+      let found: Media | undefined =
+        customMovies.find((m) => String(m.id) === id) ||
         favorites.find((m) => String(m.id) === id) ||
-        trending.find((m) => String(m.id) === id);
+        trending.find((m) => String(m.id) === id) ||
+        movies.find((m) => String(m.id) === id) ||
+        tvShows.find((m) => String(m.id) === id);
 
-      if (!found) {
+      // Fallback: If not in state yet (e.g., direct page reload), look in localStorage
+      if (!found && id.startsWith('custom-')) {
+        const localData = JSON.parse(localStorage.getItem('customMedia') || '{}');
+        const allLocalItems = [
+          ...(localData.movies || []),
+          ...(localData.tvShows || []),
+          ...(localData.trending || []),
+          ...(localData.customMovies || []),
+          ...(localData.edited || [])
+        ];
+        found = allLocalItems.find((m: Media) => String(m.id) === id);
+      }
+
+      if (!found && !id.startsWith('custom-')) {
         try {
           const res = await tmdbApi.get<Media>(`/${type}/${id}`);
           found = res.data;
@@ -39,6 +59,12 @@ const EditMedia = () => {
           navigate('/');
           return;
         }
+      }
+
+      if (!found) {
+        console.error('Media not found');
+        navigate('/');
+        return;
       }
 
       setMedia(found);
@@ -51,16 +77,26 @@ const EditMedia = () => {
     };
 
     fetchMedia();
-  }, [id, type, favorites, trending, navigate]);
+  }, [id, type, favorites, trending, movies, tvShows, customMovies, navigate]);
 
-  if (!media) return <div className="text-white flex justify-center items-center h-screen">Loading...</div>;
+  if (!id || !type)
+    return <div className="text-white flex justify-center items-center h-screen">Invalid URL</div>;
+
+  if (!media)
+    return <div className="text-white flex justify-center items-center h-screen">Loading...</div>;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!media) return;
+    if (!media || !id) return;
 
-    const sliceKey: 'movies' | 'tvShows' | 'trending' =
-      type === 'movie' ? 'movies' : type === 'tv' ? 'tvShows' : 'trending';
+    const sliceKey: 'movies' | 'tvShows' | 'trending' | 'customMovies' =
+      id.startsWith('custom-')
+        ? 'customMovies' // You can map this dynamically if needed based on original item
+        : type === 'movie'
+        ? 'movies'
+        : type === 'tv'
+        ? 'tvShows'
+        : 'trending';
 
     const updatedMedia: Media = {
       ...media,
