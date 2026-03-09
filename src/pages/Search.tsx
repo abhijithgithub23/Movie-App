@@ -24,13 +24,14 @@ const Search = () => {
     e.preventDefault();
     if (!query.trim()) return;
     dispatch(searchMediaThunk(query));
+    setQuery(''); 
   };
 
   const filteredResults = selectedGenre
     ? searchResults.filter((m) => m.genres?.some((g) => g.id === selectedGenre))
     : searchResults;
 
-  console.log('Search results:', searchResults);
+  // console.log('Search results:', searchResults);
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
