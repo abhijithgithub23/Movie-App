@@ -27,20 +27,24 @@ const Details = () => {
   const favorites = useSelector((state: RootState) => state.favorites.items);
   const mediaSlice = useSelector((state: RootState) => state.media[sliceKey]);
 
-  // TMDB fallback
+  // TMDB fallback for full details
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
 
-  // Find media dynamically from favorites -> slice -> TMDB
+  // Find media dynamically: prefer TMDB full details, then favorites, then slice
   const media: Media | null =
-    favorites.find((m) => String(m.id) === id) ||
-    mediaSlice.find((m) => String(m.id) === id) ||
-    tmdbMedia;
+    tmdbMedia ??
+    favorites.find((m) => String(m.id) === id) ??
+    mediaSlice.find((m) => String(m.id) === id) ??
+    null;
 
+  // Fetch full TMDB data if missing genres/details
   useEffect(() => {
     if (!id || !type) return;
 
-    // Fetch from TMDB only if not custom and not in slice
-    if (!id.startsWith('custom') && !mediaSlice.find((m) => String(m.id) === id)) {
+    const sliceItem = mediaSlice.find((m) => String(m.id) === id);
+    const hasFullData = sliceItem?.genres?.length;
+
+    if (!id.startsWith('custom') && !hasFullData) {
       let canceled = false;
       tmdbApi
         .get<Media>(`/${type}/${id}`)
@@ -98,7 +102,8 @@ const Details = () => {
 
           <p className="text-lg leading-relaxed">{media.overview}</p>
 
-          {media.genres && (
+          {/* Genres */}
+          {media.genres && media.genres.length > 0 && (
             <p>
               <strong>Genres:</strong> {media.genres.map((g) => g.name).join(', ')}
             </p>
