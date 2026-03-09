@@ -1,4 +1,3 @@
-// features/media/mediaSlice.ts
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { tmdbApi } from '../../api/tmdb';
@@ -23,7 +22,7 @@ const saveLocalMedia = (data: LocalMedia) => {
   localStorage.setItem('customMedia', JSON.stringify(data));
 };
 
-// ✅ Properly typed Async Thunks
+// Async Thunks
 export const getTrending = createAsyncThunk<Media[]>('media/getTrending', async () => {
   const res = await tmdbApi.get('/trending/all/day');
   return res.data.results;
@@ -43,7 +42,6 @@ export const searchMediaThunk = createAsyncThunk<Media[], string>(
   'media/searchMedia',
   async (query) => {
     const res = await tmdbApi.get('/search/multi', { params: { query } });
-    console.log("Search Results: ", res.data.results);
     return res.data.results;
   }
 );
@@ -83,11 +81,11 @@ const mediaSlice = createSlice({
       action: PayloadAction<{ media: Media; type: 'trending' | 'movies' | 'tvShows' }>
     ) => {
       const { media, type } = action.payload;
-      const newMedia = { ...media, id: `custom-${Date.now()}`, isCustom: true };
-      (state[type] as Media[]).unshift(newMedia);
+      const newMedia: Media = { ...media, id: `custom-${Date.now()}`, isCustom: true };
+      state[type].unshift(newMedia);
 
       const local = getLocalMedia();
-      local[type].push(newMedia);
+      local[type].unshift(newMedia);
       saveLocalMedia(local);
     },
 
@@ -96,11 +94,11 @@ const mediaSlice = createSlice({
       action: PayloadAction<{ media: Media; type: 'trending' | 'movies' | 'tvShows' }>
     ) => {
       const { media, type } = action.payload;
-      const index = (state[type] as Media[]).findIndex((m) => m.id === media.id);
-      if (index !== -1) (state[type] as Media[])[index] = media;
+      const index = state[type].findIndex((m) => String(m.id) === String(media.id));
+      if (index !== -1) state[type][index] = media;
 
       const local = getLocalMedia();
-      const editIndex = local.edited.findIndex((m) => m.id === media.id);
+      const editIndex = local.edited.findIndex((m) => String(m.id) === String(media.id));
       if (editIndex !== -1) local.edited[editIndex] = media;
       else local.edited.push(media);
 
@@ -108,69 +106,59 @@ const mediaSlice = createSlice({
     },
 
     deleteMedia: (
-      state,
-      action: PayloadAction<{ id: string | number; type: 'trending' | 'movies' | 'tvShows' }>
-    ) => {
-      const { id, type } = action.payload;
-      (state[type] as Media[]) = (state[type] as Media[]).filter((m) => m.id !== id);
-
-      const local = getLocalMedia();
-      local.deleted.push(id);
-      saveLocalMedia(local);
-    },
+        state,
+        action: PayloadAction<{ id: string | number; type: 'trending' | 'movies' | 'tvShows' }>
+      ) => {
+        const { id, type } = action.payload;
+        state[type] = state[type].filter((m) => String(m.id) !== String(id));
+        // Also remove from trending if it exists there
+        state.trending = state.trending.filter((m) => String(m.id) !== String(id));
+        saveLocalMedia(getLocalMedia());
+      },
   },
   extraReducers: (builder) => {
+    const mergeWithLocal = (fetched: Media[], type: 'trending' | 'movies' | 'tvShows') => {
+      const local = getLocalMedia();
+      // Remove deleted
+      let merged = fetched.filter((m) => !local.deleted.includes(m.id));
+      // Apply edits
+      merged = merged.map((m) => local.edited.find((e) => String(e.id) === String(m.id)) || m);
+      // Merge with custom additions
+      return [...local[type], ...merged];
+    };
+
     builder
       // Trending
-      .addCase(getTrending.pending, (state) => {
-        state.status.trending = 'loading';
-      })
+      .addCase(getTrending.pending, (state) => { state.status.trending = 'loading'; })
       .addCase(getTrending.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.trending = 'succeeded';
-        const local = getLocalMedia();
-        let merged = action.payload.filter((m) => !local.deleted.includes(m.id));
-        merged = merged.map((m) => local.edited.find((e) => e.id === m.id) || m);
-        state.trending = [...local.trending, ...merged];
+        state.trending = mergeWithLocal(action.payload, 'trending');
       })
-      .addCase(getTrending.rejected, (state) => {
-        state.status.trending = 'failed';
-      })
+      .addCase(getTrending.rejected, (state) => { state.status.trending = 'failed'; })
 
       // Movies
-      .addCase(getMovies.pending, (state) => {
-        state.status.movies = 'loading';
-      })
+      .addCase(getMovies.pending, (state) => { state.status.movies = 'loading'; })
       .addCase(getMovies.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.movies = 'succeeded';
-        state.movies = action.payload;
+        state.movies = mergeWithLocal(action.payload, 'movies');
       })
-      .addCase(getMovies.rejected, (state) => {
-        state.status.movies = 'failed';
-      })
+      .addCase(getMovies.rejected, (state) => { state.status.movies = 'failed'; })
 
       // TV Shows
-      .addCase(getTVShows.pending, (state) => {
-        state.status.tvShows = 'loading';
-      })
+      .addCase(getTVShows.pending, (state) => { state.status.tvShows = 'loading'; })
       .addCase(getTVShows.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.tvShows = 'succeeded';
-        state.tvShows = action.payload;
+        state.tvShows = mergeWithLocal(action.payload, 'tvShows');
       })
-      .addCase(getTVShows.rejected, (state) => {
-        state.status.tvShows = 'failed';
-      })
+      .addCase(getTVShows.rejected, (state) => { state.status.tvShows = 'failed'; })
 
       // Search
-      .addCase(searchMediaThunk.pending, (state) => {
-        state.status.searchResults = 'loading';
-      })
+      .addCase(searchMediaThunk.pending, (state) => { state.status.searchResults = 'loading'; })
       .addCase(searchMediaThunk.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.searchResults = 'succeeded';
         state.searchResults = action.payload;
       })
-      .addCase(searchMediaThunk.rejected, (state) => {
-        state.status.searchResults = 'failed';
-      });
+      .addCase(searchMediaThunk.rejected, (state) => { state.status.searchResults = 'failed'; });
   },
 });
 

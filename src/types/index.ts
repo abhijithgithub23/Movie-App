@@ -16,6 +16,8 @@ export type Media = {
   origin_country?: string[];
   adult?: boolean;
   popularity?: number;
+  isCustom?: boolean;
+
 };
 
 export interface UserState {

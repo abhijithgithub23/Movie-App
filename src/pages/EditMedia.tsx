@@ -18,7 +18,7 @@ const EditMedia = () => {
   const [formData, setFormData] = useState<Partial<Media>>({
     title: '',
     overview: '',
-    poster_path: '',  
+    poster_path: '',
     media_type: 'movie',
   });
 
@@ -26,7 +26,9 @@ const EditMedia = () => {
     if (!id || !type) return;
 
     const fetchMedia = async () => {
-      let found = favorites.find(m => String(m.id) === id) || trending.find(m => String(m.id) === id);
+      let found =
+        favorites.find((m) => String(m.id) === id) ||
+        trending.find((m) => String(m.id) === id);
 
       if (!found) {
         try {
@@ -51,23 +53,24 @@ const EditMedia = () => {
     fetchMedia();
   }, [id, type, favorites, trending, navigate]);
 
-  if (!media) {
-    return <div className="text-white flex justify-center items-center h-screen">Loading...</div>;
-  }
+  if (!media) return <div className="text-white flex justify-center items-center h-screen">Loading...</div>;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!media) return;
 
+    const sliceKey: 'movies' | 'tvShows' | 'trending' =
+      type === 'movie' ? 'movies' : type === 'tv' ? 'tvShows' : 'trending';
+
     const updatedMedia: Media = {
       ...media,
-      ...formData,
-      title: formData.media_type === 'movie' ? formData.title : undefined,
-      name: formData.media_type === 'tv' ? formData.title : undefined,
+      overview: formData.overview || media.overview,
+      poster_path: formData.poster_path || media.poster_path,
+      media_type: formData.media_type || media.media_type,
+      ...(formData.media_type === 'movie' ? { title: formData.title } : { name: formData.title }),
     };
 
-    // ✅ Correct dispatch with payload
-    dispatch(editMedia({ media: updatedMedia, type: type as 'trending' | 'movies' | 'tvShows' }));
+    dispatch(editMedia({ media: updatedMedia, type: sliceKey }));
     navigate(`/details/${type}/${media.id}`);
   };
 
@@ -81,7 +84,7 @@ const EditMedia = () => {
           required
           className="p-3 bg-gray-700 text-white rounded focus:ring-2 focus:ring-yellow-500 outline-none"
           value={formData.title || ''}
-          onChange={e => setFormData({ ...formData, title: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
         />
         <textarea
           placeholder="Overview / Description"
@@ -89,7 +92,7 @@ const EditMedia = () => {
           rows={4}
           className="p-3 bg-gray-700 text-white rounded focus:ring-2 focus:ring-yellow-500 outline-none"
           value={formData.overview || ''}
-          onChange={e => setFormData({ ...formData, overview: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
         />
         <input
           type="text"
@@ -97,17 +100,12 @@ const EditMedia = () => {
           required
           className="p-3 bg-gray-700 text-white rounded focus:ring-2 focus:ring-yellow-500 outline-none"
           value={formData.poster_path || ''}
-          onChange={e => setFormData({ ...formData, poster_path: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, poster_path: e.target.value })}
         />
-        <label htmlFor="mediaType" className="text-white font-semibold">
-          Media Type
-        </label>
-
         <select
-          id="mediaType"
           className="p-3 bg-gray-700 text-white rounded outline-none"
           value={formData.media_type}
-          onChange={e =>
+          onChange={(e) =>
             setFormData({ ...formData, media_type: e.target.value as 'movie' | 'tv' })
           }
         >

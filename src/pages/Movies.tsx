@@ -5,7 +5,7 @@ import type { RootState, AppDispatch } from '../store/store';
 import MediaCard from '../components/Media/MediaCard';
 
 const Movies = () => {
-  const dispatch = useDispatch<AppDispatch>(); // ✅ Typed dispatch
+  const dispatch = useDispatch<AppDispatch>(); 
   const movies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
 

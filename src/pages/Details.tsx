@@ -1,5 +1,5 @@
 // src/pages/Details.tsx
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { tmdbApi } from '../api/tmdb';
@@ -19,24 +19,28 @@ const Details = () => {
   const id = paramId || '';
   const type = paramType || '';
 
-  const favorites = useSelector((state: RootState) => state.favorites.items);
-  const trending = useSelector((state: RootState) => state.media.trending);
+  // Map URL type to Redux slice key
+  const sliceKey: 'trending' | 'movies' | 'tvShows' =
+    type === 'movie' ? 'movies' : type === 'tv' ? 'tvShows' : 'trending';
 
+  // Redux slices
+  const favorites = useSelector((state: RootState) => state.favorites.items);
+  const mediaSlice = useSelector((state: RootState) => state.media[sliceKey]);
+
+  // TMDB fallback
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
 
-  // Combine Redux + TMDB
-  const media = useMemo<Media | null>(() => {
-    if (!id) return null;
-    const custom = favorites.find((m) => String(m.id) === id);
-    const reduxTrending = trending.find((m) => String(m.id) === id);
-    return custom || reduxTrending || tmdbMedia;
-  }, [id, favorites, trending, tmdbMedia]);
+  // Find media dynamically from favorites -> slice -> TMDB
+  const media: Media | null =
+    favorites.find((m) => String(m.id) === id) ||
+    mediaSlice.find((m) => String(m.id) === id) ||
+    tmdbMedia;
 
   useEffect(() => {
     if (!id || !type) return;
 
-    // Fetch from TMDB if not custom and not in trending
-    if (!id.startsWith('custom') && !trending.find((m) => String(m.id) === id)) {
+    // Fetch from TMDB only if not custom and not in slice
+    if (!id.startsWith('custom') && !mediaSlice.find((m) => String(m.id) === id)) {
       let canceled = false;
       tmdbApi
         .get<Media>(`/${type}/${id}`)
@@ -48,7 +52,7 @@ const Details = () => {
         canceled = true;
       };
     }
-  }, [id, type, trending, navigate]);
+  }, [id, type, mediaSlice, navigate]);
 
   if (!media) {
     return (
@@ -156,7 +160,7 @@ const Details = () => {
                     dispatch(
                       deleteMedia({
                         id: media.id,
-                        type: type as 'trending' | 'movies' | 'tvShows',
+                        type: sliceKey,
                       })
                     );
                     navigate('/');
