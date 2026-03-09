@@ -51,14 +51,14 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
 
         <div
           ref={rowRef}
-          className="flex overflow-x-auto scrollbar-hide gap-4 px-4 md:px-8 scroll-smooth snap-x snap-mandatory"
+          className="flex overflow-x-auto scrollbar-hide gap-4 px-4 md:px-8 scroll-smooth snap-x snap-mandatory ml-5"
         >
           {media.map((m) => (
             <div
               key={m.id}
               onClick={() => handleNavigation(m)}
               /* Added 'group' here so we can target the title inside on hover */
-              className="group flex-shrink-0 w-40 md:w-48 lg:w-56 snap-start cursor-pointer"
+              className="group flex-shrink-0 w-40 md:w-48 lg:w-56 snap-start cursor-pointer m-2"
             >
               {/* Image Wrapper */}
               <div className="relative overflow-hidden rounded-lg h-[250px] md:h-[300px] lg:h-[350px] transform transition-transform duration-300 hover:scale-105">
