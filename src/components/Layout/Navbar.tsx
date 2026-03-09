@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useState } from "react";
-// Import the icons
-import { Search, Heart, Menu, X } from "lucide-react"; 
+// Added LogOut to the imports
+import { Search, Heart, Menu, X, Plus, LogOut } from "lucide-react"; 
 
 const Navbar = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
@@ -29,40 +29,62 @@ const Navbar = () => {
           <NavLink to="/movies" className={linkClass}>Movies</NavLink>
           <NavLink to="/tv" className={linkClass}>TV Shows</NavLink>
 
-          {/* Icon Links */}
-          <div className="flex items-center gap-5 ml-4 border-l border-gray-700 pl-6">
-            <NavLink to="/search" className={linkClass} title="Search">
-              <Search size={22} strokeWidth={2} />
+          {/* Icon Links Group */}
+          <div className="flex items-center gap-6 ml-4 border-l border-gray-700 pl-6">
+            <NavLink to="/search"
+             className={({ isActive }) => 
+                `transition-colors duration-300 ${
+                  isActive ? "text-blue-500" : "text-gray-400 hover:text-blue-500"
+                }`
+              }
+             title="Search">
+              <Search size={22} strokeWidth={2.5} />
             </NavLink>
-            <NavLink to="/favorites" className={linkClass} title="Favorites">
-              <Heart size={22} strokeWidth={2} />
+            
+            {/* Favorites Icon - CUSTOM HOVER RED */}
+            <NavLink 
+              to="/favorites" 
+              title="Favorites"
+              className={({ isActive }) => 
+                `transition-colors duration-300 ${
+                  isActive ? "text-red-500" : "text-gray-400 hover:text-red-500"
+                }`
+              }
+            >
+              <Heart size={22} strokeWidth={2.5} />
             </NavLink>
+
+            {/* Admin Add Icon */}
+            {isAdmin && (
+              <NavLink
+                to="/admin/add"
+                className={({ isActive }) => 
+                  `transition-colors ${isActive ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"}`
+                }
+                title="Add Media"
+              >
+                <Plus size={26} strokeWidth={3} />
+              </NavLink>
+            )}
+
+            {/* Logout Icon (Only if authenticated) */}
+            {isAuthenticated ? (
+              <button
+                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+                className="text-red-500 hover:text-red-400 transition-colors ml-2"
+                title="Logout"
+              >
+                <LogOut size={22} strokeWidth={2.5} />
+              </button>
+            ) : (
+              <button
+                onClick={() => loginWithRedirect()}
+                className="bg-white text-black px-5 py-1.5 rounded-sm font-bold hover:bg-gray-200 transition-all ml-2"
+              >
+                Login
+              </button>
+            )}
           </div>
-
-          {isAdmin && (
-            <NavLink
-              to="/admin/add"
-              className="text-yellow-400 text-sm font-bold uppercase tracking-wider hover:text-yellow-300 ml-2"
-            >
-              + Add Media
-            </NavLink>
-          )}
-
-          {isAuthenticated ? (
-            <button
-              onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-              className="bg-red-600 text-white px-5 py-1.5 rounded-sm font-medium hover:bg-red-700 transition-all ml-2"
-            >
-              Logout
-            </button>
-          ) : (
-            <button
-              onClick={() => loginWithRedirect()}
-              className="bg-white text-black px-5 py-1.5 rounded-sm font-bold hover:bg-gray-200 transition-all ml-2"
-            >
-              Login
-            </button>
-          )}
         </div>
 
         {/* Mobile Hamburger Toggle */}
@@ -81,42 +103,41 @@ const Navbar = () => {
           <NavLink to="/movies" className={linkClass} onClick={() => setIsOpen(false)}>Movies</NavLink>
           <NavLink to="/tv" className={linkClass} onClick={() => setIsOpen(false)}>TV Shows</NavLink>
           
-          <div className="flex gap-8 py-2 border-y border-gray-800">
-            <NavLink to="/search" className={linkClass} onClick={() => setIsOpen(false)}>
-              <Search size={24} /> <span className="text-sm uppercase tracking-widest">Search</span>
+          {/* Mobile Icon Grid */}
+          <div className={`grid ${isAuthenticated ? (isAdmin ? 'grid-cols-4' : 'grid-cols-3') : 'grid-cols-2'} gap-4 py-4 border-y border-gray-800 text-center`}>
+            <NavLink to="/search" className="flex flex-col items-center gap-1 text-gray-400" onClick={() => setIsOpen(false)}>
+              <Search size={24} /> <span className="text-[10px] uppercase tracking-widest">Search</span>
             </NavLink>
-            <NavLink to="/favorites" className={linkClass} onClick={() => setIsOpen(false)}>
-              <Heart size={24} /> <span className="text-sm uppercase tracking-widest">Favorites</span>
+            <NavLink to="/favorites" className="flex flex-col items-center gap-1 text-gray-400" onClick={() => setIsOpen(false)}>
+              <Heart size={24} /> <span className="text-[10px] uppercase tracking-widest">Saved</span>
             </NavLink>
-          </div>
-          
-          {isAdmin && (
-            <NavLink
-              to="/admin/add"
-              className="text-yellow-400 font-bold"
-              onClick={() => setIsOpen(false)}
-            >
-              + ADD MEDIA
-            </NavLink>
-          )}
+            
+            {isAdmin && (
+              <NavLink to="/admin/add" className="flex flex-col items-center gap-1 text-yellow-500" onClick={() => setIsOpen(false)}>
+                <Plus size={24} /> <span className="text-[10px] uppercase tracking-widest">Add</span>
+              </NavLink>
+            )}
 
-          <div className="mt-2">
-            {isAuthenticated ? (
-              <button
+            {isAuthenticated && (
+              <button 
                 onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-                className="bg-red-600 text-white w-full py-3 rounded-sm font-bold"
+                className="flex flex-col items-center gap-1 text-red-500"
               >
-                LOGOUT
+                <LogOut size={24} /> <span className="text-[10px] uppercase tracking-widest">Exit</span>
               </button>
-            ) : (
+            )}
+          </div>
+
+          {!isAuthenticated && (
+            <div className="mt-2">
               <button
                 onClick={() => loginWithRedirect()}
                 className="bg-white text-black w-full py-3 rounded-sm font-bold"
               >
                 LOGIN
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </nav>
