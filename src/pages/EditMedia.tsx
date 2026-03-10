@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { editMedia } from '../features/media/mediaSlice';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,7 +11,7 @@ const EditMedia = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const favorites = useSelector((state: RootState) => state.favorites.items);
+  // Removed the 'favorites' selector here
   const trending = useSelector((state: RootState) => state.media.trending);
   const movies = useSelector((state: RootState) => state.media.movies);
   const tvShows = useSelector((state: RootState) => state.media.tvShows);
@@ -30,9 +30,9 @@ const EditMedia = () => {
     if (!id || !type) return;
 
     const fetchMedia = async () => {
+      // Removed the 'favorites' check from this chain
       let found: Media | undefined =
         customMovies.find((m) => String(m.id) === id) ||
-        favorites.find((m) => String(m.id) === id) ||
         trending.find((m) => String(m.id) === id) ||
         movies.find((m) => String(m.id) === id) ||
         tvShows.find((m) => String(m.id) === id);
@@ -65,7 +65,8 @@ const EditMedia = () => {
     };
 
     fetchMedia();
-  }, [id, type, favorites, trending, movies, tvShows, customMovies, navigate]);
+  // Removed 'favorites' from the dependency array below
+  }, [id, type, trending, movies, tvShows, customMovies, navigate]);
 
   if (!id || !type)
     return (
@@ -85,30 +86,17 @@ const EditMedia = () => {
     e.preventDefault();
     if (!media || !id) return;
 
-    // Detect which slice actually contains the media
-    let sliceKey: 'movies' | 'tvShows' | 'trending' | 'customMovies' = 'movies';
-
-    if (customMovies.find((m) => String(m.id) === id)) {
-      sliceKey = 'customMovies';
-    } else if (trending.find((m) => String(m.id) === id)) {
-      sliceKey = 'trending';
-    } else if (movies.find((m) => String(m.id) === id)) {
-      sliceKey = 'movies';
-    } else if (tvShows.find((m) => String(m.id) === id)) {
-      sliceKey = 'tvShows';
-    }
-
     const updatedMedia: Media = {
       ...media,
       overview: formData.overview || media.overview,
       poster_path: formData.poster_path || media.poster_path,
       media_type: formData.media_type || media.media_type,
       ...(formData.media_type === 'movie'
-        ? { title: formData.title }
-        : { name: formData.title }),
+        ? { title: formData.title, name: undefined }
+        : { name: formData.title, title: undefined }),
     };
 
-    dispatch(editMedia({ media: updatedMedia, type: sliceKey }));
+    dispatch(editMedia(updatedMedia));
 
     navigate(`/details/${type}/${media.id}`);
   };
@@ -124,9 +112,7 @@ const EditMedia = () => {
           required
           className="p-3 bg-gray-700 text-white rounded focus:ring-2 focus:ring-yellow-500 outline-none"
           value={formData.title || ''}
-          onChange={(e) =>
-            setFormData({ ...formData, title: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
         />
 
         <textarea
@@ -135,9 +121,7 @@ const EditMedia = () => {
           rows={4}
           className="p-3 bg-gray-700 text-white rounded focus:ring-2 focus:ring-yellow-500 outline-none"
           value={formData.overview || ''}
-          onChange={(e) =>
-            setFormData({ ...formData, overview: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
         />
 
         <input
@@ -146,9 +130,7 @@ const EditMedia = () => {
           required
           className="p-3 bg-gray-700 text-white rounded focus:ring-2 focus:ring-yellow-500 outline-none"
           value={formData.poster_path || ''}
-          onChange={(e) =>
-            setFormData({ ...formData, poster_path: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, poster_path: e.target.value })}
         />
 
         <select

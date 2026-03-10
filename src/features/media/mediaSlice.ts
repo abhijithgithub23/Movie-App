@@ -1,109 +1,20 @@
-// src/features/media/mediaSlice.ts
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import { tmdbApi } from '../../api/tmdb';
-import type { Media } from '../../types';
-
-type LocalMedia = {
-  trending: Media[];
-  movies: Media[];
-  tvShows: Media[];
-  customMovies: Media[];
-  edited: Media[];
-  deleted: (string | number)[];
-};
-
-const getLocalMedia = (): LocalMedia => {
-  const data = localStorage.getItem('customMedia');
-  if (!data) {
-    return { trending: [], movies: [], tvShows: [], customMovies: [], edited: [], deleted: [] };
-  }
-  const parsed = JSON.parse(data);
-  return {
-    trending: parsed.trending || [],
-    movies: parsed.movies || [],
-    tvShows: parsed.tvShows || [],
-    customMovies: parsed.customMovies || [],
-    edited: parsed.edited || [],
-    deleted: parsed.deleted || [],
-  };
-};
-
-const saveLocalMedia = (data: LocalMedia) => {
-  localStorage.setItem('customMedia', JSON.stringify(data));
-};
-
-const initialLocal = getLocalMedia();
-const initialCustomMovies = initialLocal.customMovies.map(
-  (m) => initialLocal.edited.find((e) => String(e.id) === String(m.id)) || m
-);
-
-// Helper: Fetch full details for all items
-// ADDED: defaultMediaType parameter to handle /discover endpoints missing the media_type field
-const fetchFullDetailsForItems = async (items: Media[], defaultMediaType: 'movie' | 'tv' = 'movie') => {
-  return Promise.all(
-    items.map(async (item) => {
-      try {
-        // Only fetch full details for TMDB items (skip custom)
-        if (String(item.id).startsWith('custom')) return item;
-        
-        // Determine the correct media type
-        const mediaType = item.media_type || defaultMediaType;
-        
-        const res = await tmdbApi.get(`/${mediaType}/${item.id}`);
-        
-        // Return the merged data, ensuring media_type is explicitly set
-        return { ...item, ...res.data, media_type: mediaType } as Media;
-      } catch {
-        return { ...item, media_type: item.media_type || defaultMediaType }; // fallback
-      }
-    })
-  );
-};
-
-// Async Thunks
-export const getTrending = createAsyncThunk<Media[]>('media/getTrending', async () => {
-  const res = await tmdbApi.get('/trending/all/day');
-  const items: Media[] = res.data.results;
-  // Trending items usually include media_type, so the default 'movie' fallback is rarely hit
-  const fullDetails = await fetchFullDetailsForItems(items);
-  return fullDetails;
-});
-
-export const getMovies = createAsyncThunk<Media[]>('media/getMovies', async () => {
-  const res = await tmdbApi.get('/discover/movie');
-  const items: Media[] = res.data.results;
-  // Explicitly pass 'movie' as the default media type
-  const fullDetails = await fetchFullDetailsForItems(items, 'movie');
-  return fullDetails;
-});
-
-export const getTVShows = createAsyncThunk<Media[]>('media/getTVShows', async () => {
-  const res = await tmdbApi.get('/discover/tv');
-  const items: Media[] = res.data.results;
-  // Explicitly pass 'tv' as the default media type to prevent the 404 errors
-  const fullDetails = await fetchFullDetailsForItems(items, 'tv');
-  return fullDetails;
-});
-
-export const searchMediaThunk = createAsyncThunk<Media[], string>(
-  'media/searchMedia',
-  async (query) => {
-    const res = await tmdbApi.get('/search/multi', { params: { query } });
-    return res.data.results;
-  }
-);
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
+import { tmdbApi } from "../../api/tmdb";
+import type { Media } from "../../types";
 
 interface MediaState {
   trending: Media[];
   movies: Media[];
   tvShows: Media[];
-  customMovies: Media[];
+  customMovies: Media[];  // persisted
+  edited: Media[];        // persisted edits
+  deleted: (string | number)[]; // persisted deletions
   searchResults: Media[];
   status: {
-    trending: 'idle' | 'loading' | 'succeeded' | 'failed';
-    movies: 'idle' | 'loading' | 'succeeded' | 'failed';
-    tvShows: 'idle' | 'loading' | 'succeeded' | 'failed';
-    searchResults: 'idle' | 'loading' | 'succeeded' | 'failed';
+    trending: "idle" | "loading" | "succeeded" | "failed";
+    movies: "idle" | "loading" | "succeeded" | "failed";
+    tvShows: "idle" | "loading" | "succeeded" | "failed";
+    searchResults: "idle" | "loading" | "succeeded" | "failed";
   };
 }
 
@@ -111,111 +22,205 @@ const initialState: MediaState = {
   trending: [],
   movies: [],
   tvShows: [],
-  customMovies: initialCustomMovies,
+  customMovies: [],
+  edited: [],
+  deleted: [],
   searchResults: [],
   status: {
-    trending: 'idle',
-    movies: 'idle',
-    tvShows: 'idle',
-    searchResults: 'idle',
+    trending: "idle",
+    movies: "idle",
+    tvShows: "idle",
+    searchResults: "idle",
   },
 };
 
+// Helper: fetch full details for TMDB items
+const fetchFullDetails = async (
+  items: Media[],
+  defaultMediaType: "movie" | "tv" = "movie"
+) => {
+  return Promise.all(
+    items.map(async (item) => {
+      if (String(item.id).startsWith("custom")) return item; // skip custom
+      try {
+        const mediaType = item.media_type || defaultMediaType;
+        const res = await tmdbApi.get(`/${mediaType}/${item.id}`);
+        return { ...item, ...res.data, media_type: mediaType } as Media;
+      } catch {
+        return { ...item, media_type: item.media_type || defaultMediaType };
+      }
+    })
+  );
+};
+
+// Thunks
+export const getTrending = createAsyncThunk<Media[]>(
+  "media/getTrending",
+  async () => {
+    const res = await tmdbApi.get("/trending/all/day");
+    return fetchFullDetails(res.data.results);
+  }
+);
+
+export const getMovies = createAsyncThunk<Media[]>(
+  "media/getMovies",
+  async () => {
+    const res = await tmdbApi.get("/discover/movie");
+    return fetchFullDetails(res.data.results, "movie");
+  }
+);
+
+export const getTVShows = createAsyncThunk<Media[]>(
+  "media/getTVShows",
+  async () => {
+    const res = await tmdbApi.get("/discover/tv");
+    return fetchFullDetails(res.data.results, "tv");
+  }
+);
+
+export const searchMediaThunk = createAsyncThunk<Media[], string>(
+  "media/searchMedia",
+  async (query) => {
+    const res = await tmdbApi.get("/search/multi", { params: { query } });
+    return res.data.results;
+  }
+);
+
 const mediaSlice = createSlice({
-  name: 'media',
+  name: "media",
   initialState,
   reducers: {
-    addMedia: (
-      state,
-      action: PayloadAction<{ media: Media; type: 'trending' | 'movies' | 'tvShows' | 'customMovies' }>
-    ) => {
-      const { media, type } = action.payload;
-      const newMedia: Media = { ...media, id: `custom-${Date.now()}`, isCustom: true };
-      state[type].unshift(newMedia);
+    // Add a new custom movie/show
+    addMedia: (state, action: PayloadAction<Media>) => {
+      const newMedia: Media = {
+        ...action.payload,
+        id: `custom-${Date.now()}`,
+        isCustom: true,
+      };
+      
+      // 1. Save to persisted arrays
+      state.customMovies.unshift(newMedia);
+      state.edited.push(newMedia); 
 
-      const local = getLocalMedia();
-      local[type].unshift(newMedia);
-      saveLocalMedia(local);
+      // 2. Add directly to the live view arrays so it shows up immediately
+      state.trending.unshift(newMedia);
+      if (newMedia.media_type === 'tv') {
+        state.tvShows.unshift(newMedia);
+      } else {
+        state.movies.unshift(newMedia);
+      }
     },
 
-    editMedia: (
-      state,
-      action: PayloadAction<{ media: Media; type: 'trending' | 'movies' | 'tvShows' | 'customMovies' }>
-    ) => {
-      const { media } = action.payload;
-      const stateKeys: ('trending' | 'movies' | 'tvShows' | 'customMovies' | 'searchResults')[] = [
-        'trending', 'movies', 'tvShows', 'customMovies', 'searchResults'
+    // Edit custom or API item
+    editMedia: (state, action: PayloadAction<Media>) => {
+      const media = action.payload;
+
+      const keys: Array<"trending" | "movies" | "tvShows" | "customMovies"> = [
+        "trending",
+        "movies",
+        "tvShows",
+        "customMovies",
       ];
-      stateKeys.forEach((key) => {
+
+      keys.forEach((key) => {
         const index = state[key].findIndex((m) => String(m.id) === String(media.id));
         if (index !== -1) state[key][index] = media;
       });
 
-      const local = getLocalMedia();
-      const editIndex = local.edited.findIndex((m) => String(m.id) === String(media.id));
-      if (editIndex !== -1) local.edited[editIndex] = media;
-      else local.edited.push(media);
-      saveLocalMedia(local);
+      const editIndex = state.edited.findIndex((m) => String(m.id) === String(media.id));
+      if (editIndex !== -1) state.edited[editIndex] = media;
+      else state.edited.push(media);
     },
 
-    deleteMedia: (
-      state,
-      action: PayloadAction<{ id: string | number; type: 'trending' | 'movies' | 'tvShows' | 'customMovies' }>
-    ) => {
-      const { id, type } = action.payload;
-      state[type] = state[type].filter((m) => String(m.id) !== String(id));
+    // Delete custom or API item
+    deleteMedia: (state, action: PayloadAction<string | number>) => {
+      const id = action.payload;
+      state.customMovies = state.customMovies.filter((m) => String(m.id) !== String(id));
       state.trending = state.trending.filter((m) => String(m.id) !== String(id));
-      
-      const local = getLocalMedia();
-      local.deleted.push(id);
-      saveLocalMedia(local);
+      state.movies = state.movies.filter((m) => String(m.id) !== String(id));
+      state.tvShows = state.tvShows.filter((m) => String(m.id) !== String(id));
+      if (!state.deleted.includes(id)) state.deleted.push(id);
     },
   },
   extraReducers: (builder) => {
-    const mergeWithLocal = (fetched: Media[], type: 'trending' | 'movies' | 'tvShows') => {
-      const local = getLocalMedia();
-      const localItems = local[type].map(
-        (m) => local.edited.find((e) => String(e.id) === String(m.id)) || m
+    // Merge API data with persisted edits/deletes AND custom movies
+    const mergeApiWithUserData = (
+      fetched: Media[], 
+      state: MediaState, 
+      listType: 'movie' | 'tv' | 'all'
+    ) => {
+      // 1. Filter out deleted API items and apply edits
+      let filteredApi = fetched.filter((m) => !state.deleted.includes(m.id));
+      filteredApi = filteredApi.map(
+        (m) => state.edited.find((e) => String(e.id) === String(m.id)) || m
       );
-      let merged = fetched.filter((m) => !local.deleted.includes(m.id));
-      merged = merged.map((m) => local.edited.find((e) => String(e.id) === String(m.id)) || m);
-      return [...localItems, ...merged]; 
+
+      // 2. Get relevant custom items that haven't been deleted
+      let relevantCustom = state.customMovies.filter((m) => !state.deleted.includes(m.id));
+      if (listType === 'movie') {
+        relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
+      } else if (listType === 'tv') {
+        relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv');
+      }
+
+      // 3. Put custom items at the top, followed by the API items
+      return [...relevantCustom, ...filteredApi];
     };
 
+    // TRENDING
     builder
-      // TRENDING
-      .addCase(getTrending.pending, (state) => { state.status.trending = 'loading'; }) 
-      .addCase(getTrending.fulfilled, (state, action: PayloadAction<Media[]>) => { 
-        state.status.trending = 'succeeded';
-        state.trending = mergeWithLocal(action.payload, 'trending');
+      .addCase(getTrending.pending, (state) => {
+        state.status.trending = "loading";
       })
-      .addCase(getTrending.rejected, (state) => { state.status.trending = 'failed'; })
+      .addCase(getTrending.fulfilled, (state, action: PayloadAction<Media[]>) => {
+        state.status.trending = "succeeded";
+        state.trending = mergeApiWithUserData(action.payload, state, 'all');
+      })
+      .addCase(getTrending.rejected, (state) => {
+        state.status.trending = "failed";
+      });
 
-      // MOVIES
-      .addCase(getMovies.pending, (state) => { state.status.movies = 'loading'; })
+    // MOVIES
+    builder
+      .addCase(getMovies.pending, (state) => {
+        state.status.movies = "loading";
+      })
       .addCase(getMovies.fulfilled, (state, action: PayloadAction<Media[]>) => {
-        state.status.movies = 'succeeded';
-        state.movies = mergeWithLocal(action.payload, 'movies');
+        state.status.movies = "succeeded";
+        state.movies = mergeApiWithUserData(action.payload, state, 'movie');
       })
-      .addCase(getMovies.rejected, (state) => { state.status.movies = 'failed'; })
+      .addCase(getMovies.rejected, (state) => {
+        state.status.movies = "failed";
+      });
 
-      // TV SHOWS
-      .addCase(getTVShows.pending, (state) => { state.status.tvShows = 'loading'; })
+    // TV SHOWS
+    builder
+      .addCase(getTVShows.pending, (state) => {
+        state.status.tvShows = "loading";
+      })
       .addCase(getTVShows.fulfilled, (state, action: PayloadAction<Media[]>) => {
-        state.status.tvShows = 'succeeded';
-        state.tvShows = mergeWithLocal(action.payload, 'tvShows');
+        state.status.tvShows = "succeeded";
+        state.tvShows = mergeApiWithUserData(action.payload, state, 'tv');
       })
-      .addCase(getTVShows.rejected, (state) => { state.status.tvShows = 'failed'; })
+      .addCase(getTVShows.rejected, (state) => {
+        state.status.tvShows = "failed";
+      });
 
-      // SEARCH
-      .addCase(searchMediaThunk.pending, (state) => { state.status.searchResults = 'loading'; })
+    // SEARCH
+    builder
+      .addCase(searchMediaThunk.pending, (state) => {
+        state.status.searchResults = "loading";
+      })
       .addCase(searchMediaThunk.fulfilled, (state, action: PayloadAction<Media[]>) => {
-        state.status.searchResults = 'succeeded';
+        state.status.searchResults = "succeeded";
         state.searchResults = action.payload;
       })
-      .addCase(searchMediaThunk.rejected, (state) => { state.status.searchResults = 'failed'; });
+      .addCase(searchMediaThunk.rejected, (state) => {
+        state.status.searchResults = "failed";
+      });
   },
 });
 
 export const { addMedia, editMedia, deleteMedia } = mediaSlice.actions;
+
 export default mediaSlice.reducer;

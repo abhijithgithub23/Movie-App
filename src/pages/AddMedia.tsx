@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { addMedia } from '../features/media/mediaSlice';
 import { useNavigate } from 'react-router-dom';
@@ -42,19 +42,16 @@ const AddMedia = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newMedia: Media = {
-      id: Date.now(),
+    // TMDB uses 'title' for movies and 'name' for TV shows. 
+    // We map the form's title input to both to ensure your UI displays it correctly either way.
+    const newMedia = {
       ...formData,
+      name: formData.media_type === 'tv' ? formData.title : undefined,
       genres: formData.genres.map((name, index) => ({ id: index + 1, name })),
-      isCustom: true,
-    };
+    } as unknown as Media;
 
-    dispatch(
-      addMedia({
-        media: newMedia,
-        type: formData.media_type === 'movie' ? 'movies' : 'tvShows',
-      })
-    );
+    // Dispatch directly as the Media object to match PayloadAction<Media> in your slice
+    dispatch(addMedia(newMedia));
 
     navigate('/');
   };
