@@ -76,7 +76,7 @@ const TVShows = () => {
             >
               {/* Blurred Ambient Background */}
               <div
-                className="absolute inset-0 bg-cover bg-center blur-xl scale-110 opacity-30"
+                className="absolute inset-0 bg-cover bg-center blur-sm scale-110 opacity-70"
                 style={{
                   backgroundImage: item.backdrop_path
                     ? `url(https://image.tmdb.org/t/p/original${item.backdrop_path})`
