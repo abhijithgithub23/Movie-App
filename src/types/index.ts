@@ -9,7 +9,6 @@ export type Media = {
   tagline?: string;
   first_air_date?: string;
   release_date?: string;
-  genres?: { id: number; name: string }[];
   vote_average?: number;
   vote_count?: number;
   original_language?: string;
@@ -17,6 +16,9 @@ export type Media = {
   adult?: boolean;
   popularity?: number;
   isCustom?: boolean;
+
+  genres?: { id: number; name: string }[]; // Keep this for the details page
+  genre_ids?: number[];
 
 };
 
