@@ -33,9 +33,9 @@ const Details = () => {
 
   // Find media dynamically: prefer TMDB full details, then favorites, then slice
   const media: Media | null =
-    tmdbMedia ??
     favorites.find((m) => String(m.id) === id) ??
     mediaSlice.find((m) => String(m.id) === id) ??
+    tmdbMedia ??
     null;
 
   // Fetch full TMDB data
