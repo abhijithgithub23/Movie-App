@@ -251,7 +251,7 @@ const mediaSlice = createSlice({
         state.searchResults = action.payload;
       })
       .addCase(searchMediaThunk.rejected, (state) => {
-        state.status.searchResults = "failed";
+        state.status.searchResults = "failed"; 
       });
   },
 });

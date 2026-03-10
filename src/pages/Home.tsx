@@ -76,7 +76,7 @@ const Home = () => {
                 backgroundImage: item.backdrop_path
                   ? `url(https://image.tmdb.org/t/p/original${item.backdrop_path})`
                   : "none",
-                transform: `translateX(${position})`,
+                transform: `translateX(${position})`, 
               }}
             />
           );

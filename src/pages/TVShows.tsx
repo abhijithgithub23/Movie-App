@@ -27,7 +27,7 @@ const TVShows = () => {
     () =>
       [...shows]
         .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0))
-        .slice(0, 10),
+        .slice(0, 10), 
     [shows]
   );
 
