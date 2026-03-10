@@ -62,12 +62,9 @@ export const getTrending = createAsyncThunk<Media[]>(
   }
 );
 
-// UPDATED: Resolves the TS error by explicitly defining a local number variable
 export const getMovies = createAsyncThunk<{ results: Media[]; page: number }, number | void>(
   "media/getMovies",
   async (pageArg) => {
-    // If pageArg is void (undefined), default to 1. 
-    // This guarantees currentPage is ALWAYS a number.
     const currentPage = typeof pageArg === "number" ? pageArg : 1;
     
     const res = await tmdbApi.get("/discover/movie", { params: { page: currentPage } });
@@ -79,11 +76,18 @@ export const getMovies = createAsyncThunk<{ results: Media[]; page: number }, nu
   }
 );
 
-export const getTVShows = createAsyncThunk<Media[]>(
+// UPDATED: Added pagination parameters and return types for TV Shows
+export const getTVShows = createAsyncThunk<{ results: Media[]; page: number }, number | void>(
   "media/getTVShows",
-  async () => {
-    const res = await tmdbApi.get("/discover/tv");
-    return fetchFullDetails(res.data.results, "tv");
+  async (pageArg) => {
+    const currentPage = typeof pageArg === "number" ? pageArg : 1;
+
+    const res = await tmdbApi.get("/discover/tv", { params: { page: currentPage } });
+    const results = await fetchFullDetails(res.data.results, "tv");
+
+    console.log(`Fetched TV Shows for page ${currentPage}:`, results);
+
+    return { results, page: currentPage };
   }
 );
 
@@ -146,7 +150,6 @@ const mediaSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // UPDATED: Added `includeCustom` flag so custom movies aren't duplicated on page 2+
     const mergeApiWithUserData = (
       fetched: Media[], 
       state: MediaState, 
@@ -183,7 +186,6 @@ const mediaSlice = createSlice({
         state.status.trending = "failed";
       });
 
-    // UPDATED MOVIES BUILDER: Handles pagination appending
     builder
       .addCase(getMovies.pending, (state) => {
         state.status.movies = "loading";
@@ -196,13 +198,12 @@ const mediaSlice = createSlice({
           action.payload.results, 
           state, 
           'movie', 
-          isFirstPage // Only include custom items on the first page
+          isFirstPage 
         );
 
         if (isFirstPage) {
           state.movies = processedNew;
         } else {
-          // Append new movies, filtering out any accidental duplicates
           const existingIds = new Set(state.movies.map(m => String(m.id)));
           const uniqueNew = processedNew.filter(m => !existingIds.has(String(m.id)));
           state.movies = [...state.movies, ...uniqueNew];
@@ -212,13 +213,30 @@ const mediaSlice = createSlice({
         state.status.movies = "failed";
       });
 
+    // UPDATED TV SHOWS BUILDER: Handles pagination appending
     builder
       .addCase(getTVShows.pending, (state) => {
         state.status.tvShows = "loading";
       })
-      .addCase(getTVShows.fulfilled, (state, action: PayloadAction<Media[]>) => {
+      .addCase(getTVShows.fulfilled, (state, action: PayloadAction<{ results: Media[]; page: number }>) => {
         state.status.tvShows = "succeeded";
-        state.tvShows = mergeApiWithUserData(action.payload, state, 'tv');
+        const isFirstPage = action.payload.page === 1;
+
+        const processedNew = mergeApiWithUserData(
+          action.payload.results, 
+          state, 
+          'tv', 
+          isFirstPage // Only include custom items on the first page
+        );
+
+        if (isFirstPage) {
+          state.tvShows = processedNew;
+        } else {
+          // Append new TV Shows, filtering out any accidental duplicates
+          const existingIds = new Set(state.tvShows.map(m => String(m.id)));
+          const uniqueNew = processedNew.filter(m => !existingIds.has(String(m.id)));
+          state.tvShows = [...state.tvShows, ...uniqueNew];
+        }
       })
       .addCase(getTVShows.rejected, (state) => {
         state.status.tvShows = "failed";

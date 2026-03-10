@@ -12,6 +12,10 @@ const TVShows = () => {
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
 
+  // NEW: State to track pagination
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
   // useMemo prevents unnecessary re-renders and casts media_type correctly for TypeScript
   const shows = useMemo(
     () => rawShows.map((s) => ({ ...s, media_type: "tv" as const })),
@@ -32,9 +36,21 @@ const TVShows = () => {
 
   useEffect(() => {
     if (status === "idle") {
-      dispatch(getTVShows());
+      dispatch(getTVShows(1)); // Make sure to initialize page 1
     }
   }, [dispatch, status]);
+
+  // NEW: Load more handler for infinity scrolling
+  const handleLoadMore = async () => {
+    // Prevent multiple simultaneous fetches
+    if (status !== "loading" && !isFetchingMore) {
+      setIsFetchingMore(true);
+      const nextPage = page + 1;
+      setPage(nextPage);
+      await dispatch(getTVShows(nextPage));
+      setIsFetchingMore(false);
+    }
+  };
 
   // Crossfade Interval
   useEffect(() => {
@@ -53,12 +69,6 @@ const TVShows = () => {
   const handleHeroClick = (id: string | number) => {
     navigate(`/details/tv/${id}`);
   };
-
-  // Categorize for rows
-  const highRated = shows.filter((s) => (s.vote_average ?? 0) > 7);
-  const popularShows = [...shows].sort(
-    (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
-  );
 
   return (
     <div className="bg-black text-white min-h-screen pt-2">
@@ -152,9 +162,12 @@ const TVShows = () => {
 
       {/* CONTENT ROWS */}
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
-        <MediaRow title="Discover TV Shows" media={shows} />
-        <MediaRow title="Most Popular" media={popularShows} />
-        <MediaRow title="Highly Rated" media={highRated} />
+        {/* NEW: Passed the handleLoadMore to MediaRow */}
+        <MediaRow 
+          title="Discover TV Shows" 
+          media={shows} 
+          onLoadMore={handleLoadMore} 
+        />
       </div>
     </div>
   );
