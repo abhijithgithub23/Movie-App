@@ -11,6 +11,7 @@ import Details from './pages/Details';
 import Favorites from './pages/Favorites';
 import AddMedia from './pages/AddMedia';
 import EditMedia from './pages/EditMedia';
+import Footer from './components/Layout/Footer';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
             />
           </Routes>
         </main>
+        <Footer />
       </div>
     </Router>
   );
