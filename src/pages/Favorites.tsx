@@ -1,11 +1,19 @@
+// src/pages/Favorites.tsx
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import type { RootState } from '../store/store';
-import type { Media } from '../types';
 import MediaCard from '../components/Media/MediaCard';
 
 const Favorites = () => {
-  const favorites = useSelector((state: RootState) => state.favorites.items) as Media[];
+  const { items: favorites } = useSelector((state: RootState) => state.favorites);
+  
+  // Access the internal persist state to see if loading is finished
+  const isRehydrated = useSelector((state: RootState) => state.favorites._persist?.rehydrated);
+
+  // 0. Loading State (Prevents UI flicker on refresh)
+  if (!isRehydrated) {
+    return <div className="min-h-screen bg-black" />; 
+  }
 
   // 1. Polished Empty State
   if (favorites.length === 0) {
@@ -57,13 +65,11 @@ const Favorites = () => {
             </h1>
           </div>
           
-          {/* Count Badge */}
           <div className="bg-red-950/60 text-red-400 text-sm font-bold tracking-wider uppercase px-5 py-2 rounded-full border border-red-900/50 w-fit shadow-lg">
             {favorites.length} {favorites.length === 1 ? 'Title' : 'Titles'} Saved
           </div>
         </div>
 
-        {/* Responsive Grid - Now safely reversed to show newest first! */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
           {[...favorites].reverse().map((media) => (
             <MediaCard 

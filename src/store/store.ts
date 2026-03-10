@@ -1,5 +1,7 @@
+// src/store/store.ts
 import { configureStore } from "@reduxjs/toolkit";
 import mediaReducer from "../features/media/mediaSlice";
+import favoritesReducer from "../features/favorites/favoritesSlice";
 import {
   persistStore,
   persistReducer,
@@ -10,18 +12,28 @@ import {
   PURGE,
   REGISTER,
 } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // localStorage
+import storage from "redux-persist/lib/storage";
 
-const persistConfig = {
+const mediaPersistConfig = {
   key: "media",
   storage,
   whitelist: ["customMovies", "edited", "deleted"],
 };
 
-const persistedReducer = persistReducer(persistConfig, mediaReducer);
+const favoritesPersistConfig = {
+  key: "favorites",
+  storage,
+  whitelist: ["items"],
+};
+
+const persistedMediaReducer = persistReducer(mediaPersistConfig, mediaReducer);
+const persistedFavoritesReducer = persistReducer(favoritesPersistConfig, favoritesReducer);
 
 export const store = configureStore({
-  reducer: { media: persistedReducer },
+  reducer: {
+    media: persistedMediaReducer,
+    favorites: persistedFavoritesReducer,
+  },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
@@ -31,5 +43,6 @@ export const store = configureStore({
 });
 
 export const persistor = persistStore(store);
+
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

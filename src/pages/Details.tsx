@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react'; // Added useMemo
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { tmdbApi } from '../api/tmdb';
 import { deleteMedia } from '../features/media/mediaSlice';
+import { toggleFavorite } from '../features/favorites/favoritesSlice'; // 1. Import toggle action
 import { useAuth0 } from '@auth0/auth0-react';
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
@@ -13,40 +14,38 @@ const Details = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth0();
   
-  // Replace this with your actual admin email check
   const isAdmin = user?.email === 'abhijithksd23@gmail.com';
 
   const id = paramId || '';
   const type = paramType || '';
 
-  // Select all media arrays to properly find custom and fetched items
   const trending = useSelector((state: RootState) => state.media.trending);
   const movies = useSelector((state: RootState) => state.media.movies);
   const tvShows = useSelector((state: RootState) => state.media.tvShows);
   const customMovies = useSelector((state: RootState) => state.media.customMovies);
-
-  // TMDB fallback for full details
-  const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
   
-  // Custom Modal State
+  // 2. Select favorites from store
+  const favorites = useSelector((state: RootState) => state.favorites.items);
+
+  const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Find the media item in our existing Redux state
   const reduxMedia: Media | undefined = 
     customMovies.find((m) => String(m.id) === id) ||
     trending.find((m) => String(m.id) === id) ||
     movies.find((m) => String(m.id) === id) ||
     tvShows.find((m) => String(m.id) === id);
 
-  // Final media object: prefer Redux state, fallback to TMDB fetch
   const media: Media | null = reduxMedia ?? tmdbMedia ?? null;
 
-  // Fetch full TMDB data if we don't have full details in Redux
+  // 3. Check if current media is favorited
+  const isFavorited = useMemo(() => {
+    return favorites.some((item) => String(item.id) === String(id));
+  }, [favorites, id]);
+
   useEffect(() => {
     if (!id || !type) return;
-
     const hasFullData = reduxMedia?.genres?.length;
-
     if (!id.startsWith('custom-') && !hasFullData) {
       let canceled = false;
       tmdbApi
@@ -55,9 +54,7 @@ const Details = () => {
           if (!canceled) setTmdbMedia(res.data);
         })
         .catch(() => navigate('/'));
-      return () => {
-        canceled = true;
-      };
+      return () => { canceled = true; };
     }
   }, [id, type, reduxMedia, navigate]);
 
@@ -82,13 +79,11 @@ const Details = () => {
     ? `https://image.tmdb.org/t/p/original${media.backdrop_path}`
     : null;
 
-  // Helper function to format currency
   const formatCurrency = (amount?: number) => {
     if (!amount) return 'N/A';
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
   };
 
-  // Helper function to format runtime
   const formatRuntime = (minutes?: number) => {
     if (!minutes) return null;
     const h = Math.floor(minutes / 60);
@@ -96,9 +91,7 @@ const Details = () => {
     return `${h > 0 ? h + 'h ' : ''}${m}m`;
   };
 
-  // Handle actual deletion
   const confirmDelete = () => {
-    // Dispatch ONLY the ID, as expected by PayloadAction<string | number>
     if (media.id) {
       dispatch(deleteMedia(media.id));
       setShowDeleteModal(false);
@@ -106,11 +99,14 @@ const Details = () => {
     }
   };
 
+  // 4. Handle Favorite Toggle
+  const handleFavoriteToggle = () => {
+    dispatch(toggleFavorite(media));
+  };
+
   return (
     <>
       <div className="bg-black min-h-screen text-white pb-20 -mt-20 md:-mt-24">
-        
-        {/* FULL SCREEN HERO BACKDROP */}
         <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
           {backdropUrl ? (
             <div 
@@ -120,16 +116,11 @@ const Details = () => {
           ) : (
             <div className="absolute inset-0 bg-red-950/20" />
           )}
-          
-          {/* Gradient overlays */}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent" />
         </div>
 
-        {/* MAIN CONTENT CONTAINER */}
         <div className="max-w-7xl mx-auto px-6 md:px-12 -mt-72 md:-mt-96 relative z-10 flex flex-col md:flex-row gap-8 md:gap-16">
-          
-          {/* LEFT COLUMN: POSTER & ACTIONS */}
           <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 flex flex-col items-center">
             <img
               src={posterUrl}
@@ -137,24 +128,30 @@ const Details = () => {
               className="w-64 md:w-full rounded-2xl shadow-2xl shadow-black border border-gray-800 object-cover"
             />
             
-            {/* Action Buttons - FORCED TO CENTER */}
             <div className="w-full mt-6 flex justify-center items-center gap-6">
               
-              {/* Instagram-style Heart Button (Dummy for now) */}
+              {/* 5. Updated Toggle Favorite Button */}
               <button
-                onClick={() => alert("Favorites feature coming soon!")}
-                className="transition-transform duration-300 hover:scale-110 active:scale-90 focus:outline-none"
-                title="Add to Favorites"
+                onClick={handleFavoriteToggle}
+                className={`transition-all duration-300 hover:scale-110 active:scale-90 focus:outline-none p-3 rounded-full ${
+                    isFavorited ? 'bg-red-600/10' : 'hover:bg-white/10'
+                }`}
+                title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-10 h-10 text-white hover:text-gray-300 transition-colors">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill={isFavorited ? "currentColor" : "none"} // Filled when favorited
+                  viewBox="0 0 24 24" 
+                  strokeWidth="1.5" 
+                  stroke="currentColor" 
+                  className={`w-10 h-10 transition-colors ${isFavorited ? 'text-red-500' : 'text-white'}`}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
                 </svg>
               </button>
 
-              {/* Admin Buttons */}
               {isAdmin && (
                 <div className="flex justify-center items-center gap-4 border-l pl-6 border-gray-800">
-                  {/* Edit Icon Button */}
                   <button
                     onClick={() => navigate(`/admin/edit/${type}/${media.id}`)}
                     className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300"
@@ -164,8 +161,6 @@ const Details = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
                     </svg>
                   </button>
-                  
-                  {/* Delete Icon Button */}
                   <button
                     onClick={() => setShowDeleteModal(true)}
                     className="p-2.5 rounded-full bg-red-900/40 text-red-500 border border-red-900/50 hover:bg-red-600 hover:text-white transition-all duration-300"
@@ -180,7 +175,6 @@ const Details = () => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: DETAILS */}
           <div className="flex-1 mt-8 md:mt-16">
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md">
               {media.title || media.name}
@@ -192,7 +186,6 @@ const Details = () => {
               </p>
             )}
 
-            {/* Quick Stats Row */}
             <div className="flex flex-wrap items-center gap-4 mb-8 text-sm md:text-base font-medium">
               {media.vote_average !== undefined && media.vote_average > 0 && (
                 <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-3 py-1 rounded-full backdrop-blur-sm">
@@ -231,7 +224,6 @@ const Details = () => {
               )}
             </div>
 
-            {/* Genres */}
             {media.genres && media.genres.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-10">
                 {media.genres.map((g) => (
@@ -242,7 +234,6 @@ const Details = () => {
               </div>
             )}
 
-            {/* Overview */}
             <div className="mb-12">
               <h3 className="text-xl font-bold text-white mb-4">Overview</h3>
               <p className="text-gray-300 text-lg leading-relaxed max-w-4xl">
@@ -250,7 +241,6 @@ const Details = () => {
               </p>
             </div>
 
-            {/* Extra Details Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-gray-800">
               {(media.budget ?? 0) > 0 && (
                 <div>
@@ -258,21 +248,18 @@ const Details = () => {
                   <p className="text-white font-semibold">{formatCurrency(media.budget)}</p>
                 </div>
               )}
-              
               {(media.revenue ?? 0) > 0 && (
                 <div>
                   <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Revenue</h4>
                   <p className="text-white font-semibold">{formatCurrency(media.revenue)}</p>
                 </div>
               )}
-
               {media.origin_country && media.origin_country.length > 0 && (
                 <div>
                   <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Country</h4>
                   <p className="text-white font-semibold">{media.origin_country.join(', ')}</p>
                 </div>
               )}
-
               {media.popularity && (
                 <div>
                   <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Popularity Rank</h4>
@@ -284,7 +271,6 @@ const Details = () => {
         </div>
       </div>
 
-      {/* CUSTOM DELETE CONFIRMATION MODAL */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
           <div className="bg-[#111] border border-gray-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl shadow-red-900/20 transform scale-100 transition-transform">

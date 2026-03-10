@@ -1,18 +1,13 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'; // runtime
-import type { PayloadAction } from '@reduxjs/toolkit';              // type-only
-import type { Media } from '../../types';                           // type-only
+// src/features/favorites/favoritesSlice.ts
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { Media } from '../../types';
 
 interface FavoritesState {
   items: Media[];
 }
 
-const loadFavorites = (): Media[] => {
-  const data = localStorage.getItem('userFavorites');
-  return data ? JSON.parse(data) : [];
-};
-
 const initialState: FavoritesState = {
-  items: loadFavorites(),
+  items: [],
 };
 
 const favoritesSlice = createSlice({
@@ -20,13 +15,17 @@ const favoritesSlice = createSlice({
   initialState,
   reducers: {
     toggleFavorite: (state, action: PayloadAction<Media>) => {
-      const existingIndex = state.items.findIndex(item => item.id === action.payload.id);
+      // Comparison using ID - ensure both are treated as same type (string/number)
+      const existingIndex = state.items.findIndex(
+        (item) => String(item.id) === String(action.payload.id)
+      );
+
       if (existingIndex >= 0) {
-        state.items.splice(existingIndex, 1); // Remove if exists
+        state.items.splice(existingIndex, 1);
       } else {
-        state.items.push(action.payload); // Add if not
+        // Unshift adds to the beginning, so [].reverse() in UI is cleaner
+        state.items.push(action.payload);
       }
-      localStorage.setItem('userFavorites', JSON.stringify(state.items));
     },
   },
 });
