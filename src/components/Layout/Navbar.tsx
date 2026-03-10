@@ -1,8 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useState } from "react";
-// Added LogOut to the imports
-import { Search, Heart, Menu, X, Plus, LogOut } from "lucide-react"; 
+import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv } from "lucide-react"; 
 
 const Navbar = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
@@ -25,9 +24,20 @@ const Navbar = () => {
 
         {/* Desktop Menu */}
         <div className="hidden md:flex gap-8 items-center">
-          <NavLink to="/" className={linkClass}>Home</NavLink>
-          <NavLink to="/movies" className={linkClass}>Movies</NavLink>
-          <NavLink to="/tv" className={linkClass}>TV Shows</NavLink>
+          
+          {/* Main Links with Icons */}
+          <NavLink to="/" className={linkClass}>
+            <Home size={22} strokeWidth={2.5} />
+            <span className="hidden lg:block">Home</span>
+          </NavLink>
+          <NavLink to="/movies" className={linkClass}>
+            <Film size={22} strokeWidth={2.5} />
+            <span className="hidden lg:block">Movies</span>
+          </NavLink>
+          <NavLink to="/tv" className={linkClass}>
+            <Tv size={22} strokeWidth={2.5} />
+            <span className="hidden lg:block">TV Shows</span>
+          </NavLink>
 
           {/* Icon Links Group */}
           <div className="flex items-center gap-6 ml-4 border-l border-gray-700 pl-6">
@@ -99,9 +109,17 @@ const Navbar = () => {
       {/* Mobile Menu Dropdown */}
       {isOpen && (
         <div className="md:hidden bg-black/95 backdrop-blur-xl px-6 pb-8 pt-4 flex flex-col gap-6 border-t border-gray-800 animate-in fade-in slide-in-from-top-4">
-          <NavLink to="/" className={linkClass} onClick={() => setIsOpen(false)}>Home</NavLink>
-          <NavLink to="/movies" className={linkClass} onClick={() => setIsOpen(false)}>Movies</NavLink>
-          <NavLink to="/tv" className={linkClass} onClick={() => setIsOpen(false)}>TV Shows</NavLink>
+          
+          {/* Main Links Mobile (Icon + Text) */}
+          <NavLink to="/" className={linkClass} onClick={() => setIsOpen(false)}>
+            <Home size={24} /> Home
+          </NavLink>
+          <NavLink to="/movies" className={linkClass} onClick={() => setIsOpen(false)}>
+            <Film size={24} /> Movies
+          </NavLink>
+          <NavLink to="/tv" className={linkClass} onClick={() => setIsOpen(false)}>
+            <Tv size={24} /> TV Shows
+          </NavLink>
           
           {/* Mobile Icon Grid */}
           <div className={`grid ${isAuthenticated ? (isAdmin ? 'grid-cols-4' : 'grid-cols-3') : 'grid-cols-2'} gap-4 py-4 border-y border-gray-800 text-center`}>
