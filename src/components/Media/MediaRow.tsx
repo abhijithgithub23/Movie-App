@@ -1,14 +1,16 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Media } from "../../types";
 
 interface MediaRowProps {
   title: string;
   media: Media[];
+  onLoadMore?: () => void; // Added the optional onLoadMore prop
 }
 
-const MediaRow = ({ title, media }: MediaRowProps) => {
+const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
+  const observerTarget = useRef<HTMLDivElement>(null); // Ref for the end-of-list sentinel
   const navigate = useNavigate();
 
   const scroll = (direction: "left" | "right") => {
@@ -22,6 +24,29 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
     const type = item.media_type || (item.title ? "movie" : "tv");
     navigate(`/details/${type}/${item.id}`);
   };
+
+  // Intersection Observer to trigger infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // If the invisible div at the end comes into view, trigger the fetch
+        if (entries[0].isIntersecting && onLoadMore) {
+          onLoadMore();
+        }
+      },
+      { 
+        root: rowRef.current, // Observe within the scrollable row container
+        rootMargin: "0px 200px 0px 0px", // Pre-fetch slightly before reaching the absolute end
+        threshold: 0 
+      } 
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [onLoadMore]);
 
   return (
     <div className="relative">
@@ -57,7 +82,6 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
             <div
               key={m.id}
               onClick={() => handleNavigation(m)}
-              /* Added 'group' here so we can target the title inside on hover */
               className="group flex-shrink-0 w-40 md:w-48 lg:w-56 snap-start cursor-pointer m-2"
             >
               {/* Image Wrapper */}
@@ -73,21 +97,18 @@ const MediaRow = ({ title, media }: MediaRowProps) => {
                 />
               </div>
 
-              {/* UPDATED TITLE:
-                  1. 'text-center' centers the text relative to the card.
-                  2. 'opacity-0 group-hover:opacity-100' hides it until hover.
-                  3. 'transition-opacity' makes the appearance smooth.
-              */}
               <h3 className="mt-6 text-sm md:text-base text-center truncate px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium">
                 {m.title || m.name}
               </h3>
             </div>
           ))}
+          
+          {/* Invisible target element to trigger the Intersection Observer */}
+          <div ref={observerTarget} className="w-10 flex-shrink-0" />
         </div>
       </div>
     </div>
   );
 };
-
 
 export default MediaRow;

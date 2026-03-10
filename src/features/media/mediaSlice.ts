@@ -62,11 +62,20 @@ export const getTrending = createAsyncThunk<Media[]>(
   }
 );
 
-export const getMovies = createAsyncThunk<Media[]>(
+// UPDATED: Resolves the TS error by explicitly defining a local number variable
+export const getMovies = createAsyncThunk<{ results: Media[]; page: number }, number | void>(
   "media/getMovies",
-  async () => {
-    const res = await tmdbApi.get("/discover/movie");
-    return fetchFullDetails(res.data.results, "movie");
+  async (pageArg) => {
+    // If pageArg is void (undefined), default to 1. 
+    // This guarantees currentPage is ALWAYS a number.
+    const currentPage = typeof pageArg === "number" ? pageArg : 1;
+    
+    const res = await tmdbApi.get("/discover/movie", { params: { page: currentPage } });
+    const results = await fetchFullDetails(res.data.results, "movie");
+
+    console.log(`Fetched movies for page ${currentPage}:`, results);
+    
+    return { results, page: currentPage };
   }
 );
 
@@ -90,7 +99,6 @@ const mediaSlice = createSlice({
   name: "media",
   initialState,
   reducers: {
-    // Add a new custom movie/show
     addMedia: (state, action: PayloadAction<Media>) => {
       const newMedia: Media = {
         ...action.payload,
@@ -98,11 +106,9 @@ const mediaSlice = createSlice({
         isCustom: true,
       };
       
-      // 1. Save to persisted arrays
       state.customMovies.unshift(newMedia);
       state.edited.push(newMedia); 
 
-      // 2. Add directly to the live view arrays (Movies or TV only)
       if (newMedia.media_type === 'tv') {
         state.tvShows.unshift(newMedia);
       } else {
@@ -110,7 +116,6 @@ const mediaSlice = createSlice({
       }
     },
 
-    // Edit custom or API item
     editMedia: (state, action: PayloadAction<Media>) => {
       const media = action.payload;
 
@@ -131,7 +136,6 @@ const mediaSlice = createSlice({
       else state.edited.push(media);
     },
 
-    // Delete custom or API item
     deleteMedia: (state, action: PayloadAction<string | number>) => {
       const id = action.payload;
       state.customMovies = state.customMovies.filter((m) => String(m.id) !== String(id));
@@ -142,21 +146,20 @@ const mediaSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Merge API data with persisted edits/deletes AND custom movies
+    // UPDATED: Added `includeCustom` flag so custom movies aren't duplicated on page 2+
     const mergeApiWithUserData = (
       fetched: Media[], 
       state: MediaState, 
-      listType: 'movie' | 'tv' | 'trending'
+      listType: 'movie' | 'tv' | 'trending',
+      includeCustom: boolean = true
     ) => {
-      // 1. Filter out deleted API items and apply edits
       let filteredApi = fetched.filter((m) => !state.deleted.includes(m.id));
       filteredApi = filteredApi.map(
         (m) => state.edited.find((e) => String(e.id) === String(m.id)) || m
       );
 
-      // 2. Get relevant custom items that haven't been deleted (Skip if list is trending)
       let relevantCustom: Media[] = [];
-      if (listType !== 'trending') {
+      if (listType !== 'trending' && includeCustom) {
         relevantCustom = state.customMovies.filter((m) => !state.deleted.includes(m.id));
         if (listType === 'movie') {
           relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
@@ -165,38 +168,50 @@ const mediaSlice = createSlice({
         }
       }
 
-      // 3. Put custom items at the top (if any), followed by the API items
       return [...relevantCustom, ...filteredApi];
     };
 
-    // TRENDING
     builder
       .addCase(getTrending.pending, (state) => {
         state.status.trending = "loading";
       })
       .addCase(getTrending.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.trending = "succeeded";
-        // 'trending' passed here to skip adding custom movies
         state.trending = mergeApiWithUserData(action.payload, state, 'trending');
       })
       .addCase(getTrending.rejected, (state) => {
         state.status.trending = "failed";
       });
 
-    // MOVIES
+    // UPDATED MOVIES BUILDER: Handles pagination appending
     builder
       .addCase(getMovies.pending, (state) => {
         state.status.movies = "loading";
       })
-      .addCase(getMovies.fulfilled, (state, action: PayloadAction<Media[]>) => {
+      .addCase(getMovies.fulfilled, (state, action: PayloadAction<{ results: Media[]; page: number }>) => {
         state.status.movies = "succeeded";
-        state.movies = mergeApiWithUserData(action.payload, state, 'movie');
+        const isFirstPage = action.payload.page === 1;
+        
+        const processedNew = mergeApiWithUserData(
+          action.payload.results, 
+          state, 
+          'movie', 
+          isFirstPage // Only include custom items on the first page
+        );
+
+        if (isFirstPage) {
+          state.movies = processedNew;
+        } else {
+          // Append new movies, filtering out any accidental duplicates
+          const existingIds = new Set(state.movies.map(m => String(m.id)));
+          const uniqueNew = processedNew.filter(m => !existingIds.has(String(m.id)));
+          state.movies = [...state.movies, ...uniqueNew];
+        }
       })
       .addCase(getMovies.rejected, (state) => {
         state.status.movies = "failed";
       });
 
-    // TV SHOWS
     builder
       .addCase(getTVShows.pending, (state) => {
         state.status.tvShows = "loading";
@@ -209,7 +224,6 @@ const mediaSlice = createSlice({
         state.status.tvShows = "failed";
       });
 
-    // SEARCH
     builder
       .addCase(searchMediaThunk.pending, (state) => {
         state.status.searchResults = "loading";
@@ -225,5 +239,4 @@ const mediaSlice = createSlice({
 });
 
 export const { addMedia, editMedia, deleteMedia } = mediaSlice.actions;
-
 export default mediaSlice.reducer;

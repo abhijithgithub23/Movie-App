@@ -5,6 +5,19 @@ import { getMovies } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
 
+interface MovieData {
+  id: string | number;
+  title?: string;
+  name?: string;
+  popularity?: number;
+  backdrop_path?: string;
+  poster_path?: string;
+  vote_average?: number;
+  release_date?: string;
+  overview?: string;
+  [key: string]: unknown; 
+}
+
 const Movies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -12,13 +25,15 @@ const Movies = () => {
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
 
-  // useMemo prevents unnecessary re-renders
+  // NEW: State to track pagination
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
   const movies = useMemo(
-    () => rawMovies.map((m) => ({ ...m, media_type: "movie" as const })),
+    () => rawMovies.map((m: MovieData) => ({ ...m, media_type: "movie" as const })),
     [rawMovies]
   );
 
-  // Grab the top 10 trending/popular movies specifically for the Hero section
   const trendingHeroMovies = useMemo(
     () =>
       [...movies]
@@ -31,10 +46,23 @@ const Movies = () => {
   const totalSlides = trendingHeroMovies.length;
 
   useEffect(() => {
-    if (status === "idle") dispatch(getMovies());
+    if (status === "idle") {
+      dispatch(getMovies(1));
+    }
   }, [status, dispatch]);
 
-  // Simplified Crossfade Interval
+  // NEW: Load more handler for infinity scrolling
+  const handleLoadMore = async () => {
+    // Prevent multiple simultaneous fetches
+    if (status !== "loading" && !isFetchingMore) {
+      setIsFetchingMore(true);
+      const nextPage = page + 1;
+      setPage(nextPage);
+      await dispatch(getMovies(nextPage));
+      setIsFetchingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (!totalSlides) return;
 
@@ -47,20 +75,12 @@ const Movies = () => {
 
   if (!movies.length || !trendingHeroMovies.length) return null;
 
-  // Helper for Hero Navigation
   const handleHeroClick = (id: string | number) => {
     navigate(`/details/movie/${id}`);
   };
 
-  // Categorize for rows
-  const highRated = movies.filter((m) => (m.vote_average ?? 0) > 7);
-  const popularMovies = [...movies].sort(
-    (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)
-  );
-
   return (
     <div className="bg-black text-white min-h-screen pt-2">
-      {/* NEW CINEMATIC HERO SECTION */}
       <div className="relative h-[80vh] w-full overflow-hidden flex items-center bg-black">
         {trendingHeroMovies.map((item, i) => {
           const isActive = i === activeIndex;
@@ -72,7 +92,6 @@ const Movies = () => {
                 isActive ? "opacity-100 z-10" : "opacity-0 z-0"
               }`}
             >
-              {/* Blurred Ambient Background */}
               <div
                 className="absolute inset-0 bg-cover bg-center blur-sm scale-110 opacity-70"
                 style={{
@@ -81,14 +100,10 @@ const Movies = () => {
                     : "none",
                 }}
               />
-              {/* Gradient to blend into the rest of the page */}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
 
-              {/* Content Split Layout */}
               <div className="relative z-20 w-full px-8 md:px-16 flex flex-col md:flex-row items-center justify-between gap-12">
-                
-                {/* Left Side: Text Content */}
                 <div className="flex-1 max-w-2xl">
                   <div className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-indigo-400 uppercase bg-indigo-500/10 border border-indigo-500/20 rounded-full backdrop-blur-sm">
                     Top 10 Movies • #{i + 1}
@@ -129,7 +144,6 @@ const Movies = () => {
                   </div>
                 </div>
 
-                {/* Right Side: Featured Poster */}
                 <div className="hidden md:block w-full max-w-sm flex-shrink-0 perspective-1000">
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-white/10 transform transition-transform duration-700 hover:scale-105 hover:-rotate-2 cursor-pointer"
                        onClick={() => handleHeroClick(item.id)}>
@@ -140,18 +154,19 @@ const Movies = () => {
                     />
                   </div>
                 </div>
-
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* CONTENT ROWS */}
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
-        <MediaRow title="Discover Movies" media={movies} />
-        <MediaRow title="Most Popular" media={popularMovies} />
-        <MediaRow title="Highly Rated" media={highRated} />
+        {/* NEW: Passed the handleLoadMore to MediaRow */}
+        <MediaRow 
+           title="Discover Movies" 
+           media={movies} 
+           onLoadMore={handleLoadMore} 
+        />
       </div>
     </div>
   );
