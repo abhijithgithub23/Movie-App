@@ -8,6 +8,8 @@ import { store, persistor } from './store/store';
 import App from './App';
 import './index.css';
 
+import "./i18n";
+
 const AUTH0_DOMAIN = import.meta.env.VITE_AUTH0_DOMAIN;
 const AUTH0_CLIENT_ID = import.meta.env.VITE_AUTH0_CLIENT_ID;
 

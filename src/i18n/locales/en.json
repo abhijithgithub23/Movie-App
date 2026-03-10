@@ -1,0 +1,10 @@
+{
+  "home": "Home",
+  "movies": "Movies",
+  "tvShows": "TV Shows",
+  "favorites": "Favorites",
+  "search": "Search",
+  "login": "Login",
+  "logout": "Logout",
+  "addMedia": "Add Media"
+}

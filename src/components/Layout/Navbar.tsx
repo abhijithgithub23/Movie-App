@@ -1,10 +1,15 @@
 import { NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useState } from "react";
-import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv } from "lucide-react"; 
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
+
+import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv } from "lucide-react";
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
+
   const [isOpen, setIsOpen] = useState(false);
   const isAdmin = user?.email === "abhijithksd23@gmail.com";
 
@@ -24,38 +29,44 @@ const Navbar = () => {
 
         {/* Desktop Menu */}
         <div className="hidden md:flex gap-8 items-center">
-          
-          {/* Main Links with Icons */}
+
+          {/* Main Links */}
           <NavLink to="/" className={linkClass}>
             <Home size={22} strokeWidth={2.5} />
-            <span className="hidden lg:block">Home</span>
-          </NavLink>
-          <NavLink to="/movies" className={linkClass}>
-            <Film size={22} strokeWidth={2.5} />
-            <span className="hidden lg:block">Movies</span>
-          </NavLink>
-          <NavLink to="/tv" className={linkClass}>
-            <Tv size={22} strokeWidth={2.5} />
-            <span className="hidden lg:block">TV Shows</span>
+            <span className="hidden lg:block">{t("home")}</span>
           </NavLink>
 
-          {/* Icon Links Group */}
+          <NavLink to="/movies" className={linkClass}>
+            <Film size={22} strokeWidth={2.5} />
+            <span className="hidden lg:block">{t("movies")}</span>
+          </NavLink>
+
+          <NavLink to="/tv" className={linkClass}>
+            <Tv size={22} strokeWidth={2.5} />
+            <span className="hidden lg:block">{t("tvShows")}</span>
+          </NavLink>
+
+          {/* Icon Group */}
           <div className="flex items-center gap-6 ml-4 border-l border-gray-700 pl-6">
-            <NavLink to="/search"
-             className={({ isActive }) => 
+
+            {/* Search */}
+            <NavLink
+              to="/search"
+              title={t("search")}
+              className={({ isActive }) =>
                 `transition-colors duration-300 ${
                   isActive ? "text-blue-500" : "text-gray-400 hover:text-blue-500"
                 }`
               }
-             title="Search">
+            >
               <Search size={22} strokeWidth={2.5} />
             </NavLink>
-            
-            {/* Favorites Icon - CUSTOM HOVER RED */}
-            <NavLink 
-              to="/favorites" 
-              title="Favorites"
-              className={({ isActive }) => 
+
+            {/* Favorites */}
+            <NavLink
+              to="/favorites"
+              title={t("favorites")}
+              className={({ isActive }) =>
                 `transition-colors duration-300 ${
                   isActive ? "text-red-500" : "text-gray-400 hover:text-red-500"
                 }`
@@ -64,25 +75,40 @@ const Navbar = () => {
               <Heart size={22} strokeWidth={2.5} />
             </NavLink>
 
-            {/* Admin Add Icon */}
+            {/* Admin Add */}
             {isAdmin && (
               <NavLink
                 to="/admin/add"
-                className={({ isActive }) => 
-                  `transition-colors ${isActive ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"}`
+                title={t("addMedia")}
+                className={({ isActive }) =>
+                  `transition-colors ${
+                    isActive ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"
+                  }`
                 }
-                title="Add Media"
               >
                 <Plus size={26} strokeWidth={3} />
               </NavLink>
             )}
 
-            {/* Logout Icon (Only if authenticated) */}
+            {/* Language Selector */}
+            <select
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              value={i18n.language}
+              className="bg-black border border-gray-700 text-white text-sm px-2 py-1 rounded"
+            >
+              <option value="en">EN</option>
+              <option value="hi">HI</option>
+              <option value="ml">ML</option>
+            </select>
+
+            {/* Auth */}
             {isAuthenticated ? (
               <button
-                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+                onClick={() =>
+                  logout({ logoutParams: { returnTo: window.location.origin } })
+                }
                 className="text-red-500 hover:text-red-400 transition-colors ml-2"
-                title="Logout"
+                title={t("logout")}
               >
                 <LogOut size={22} strokeWidth={2.5} />
               </button>
@@ -91,13 +117,13 @@ const Navbar = () => {
                 onClick={() => loginWithRedirect()}
                 className="bg-white text-black px-5 py-1.5 rounded-sm font-bold hover:bg-gray-200 transition-all ml-2"
               >
-                Login
+                {t("login")}
               </button>
             )}
           </div>
         </div>
 
-        {/* Mobile Hamburger Toggle */}
+        {/* Mobile Toggle */}
         <button
           className="md:hidden text-white focus:outline-none"
           onClick={() => setIsOpen(!isOpen)}
@@ -106,55 +132,61 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-black/95 backdrop-blur-xl px-6 pb-8 pt-4 flex flex-col gap-6 border-t border-gray-800 animate-in fade-in slide-in-from-top-4">
-          
-          {/* Main Links Mobile (Icon + Text) */}
-          <NavLink to="/" className={linkClass} onClick={() => setIsOpen(false)}>
-            <Home size={24} /> Home
-          </NavLink>
-          <NavLink to="/movies" className={linkClass} onClick={() => setIsOpen(false)}>
-            <Film size={24} /> Movies
-          </NavLink>
-          <NavLink to="/tv" className={linkClass} onClick={() => setIsOpen(false)}>
-            <Tv size={24} /> TV Shows
-          </NavLink>
-          
-          {/* Mobile Icon Grid */}
-          <div className={`grid ${isAuthenticated ? (isAdmin ? 'grid-cols-4' : 'grid-cols-3') : 'grid-cols-2'} gap-4 py-4 border-y border-gray-800 text-center`}>
-            <NavLink to="/search" className="flex flex-col items-center gap-1 text-gray-400" onClick={() => setIsOpen(false)}>
-              <Search size={24} /> <span className="text-[10px] uppercase tracking-widest">Search</span>
-            </NavLink>
-            <NavLink to="/favorites" className="flex flex-col items-center gap-1 text-gray-400" onClick={() => setIsOpen(false)}>
-              <Heart size={24} /> <span className="text-[10px] uppercase tracking-widest">Saved</span>
-            </NavLink>
-            
-            {isAdmin && (
-              <NavLink to="/admin/add" className="flex flex-col items-center gap-1 text-yellow-500" onClick={() => setIsOpen(false)}>
-                <Plus size={24} /> <span className="text-[10px] uppercase tracking-widest">Add</span>
-              </NavLink>
-            )}
+        <div className="md:hidden bg-black/95 backdrop-blur-xl px-6 pb-8 pt-4 flex flex-col gap-6 border-t border-gray-800">
 
-            {isAuthenticated && (
-              <button 
-                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-                className="flex flex-col items-center gap-1 text-red-500"
-              >
-                <LogOut size={24} /> <span className="text-[10px] uppercase tracking-widest">Exit</span>
-              </button>
-            )}
+          <NavLink to="/" className={linkClass} onClick={() => setIsOpen(false)}>
+            <Home size={24} /> {t("home")}
+          </NavLink>
+
+          <NavLink to="/movies" className={linkClass} onClick={() => setIsOpen(false)}>
+            <Film size={24} /> {t("movies")}
+          </NavLink>
+
+          <NavLink to="/tv" className={linkClass} onClick={() => setIsOpen(false)}>
+            <Tv size={24} /> {t("tvShows")}
+          </NavLink>
+
+          <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-800 text-center">
+
+            <NavLink
+              to="/search"
+              className="flex flex-col items-center gap-1 text-gray-400"
+              onClick={() => setIsOpen(false)}
+            >
+              <Search size={24} />
+              <span className="text-[10px] uppercase tracking-widest">{t("search")}</span>
+            </NavLink>
+
+            <NavLink
+              to="/favorites"
+              className="flex flex-col items-center gap-1 text-gray-400"
+              onClick={() => setIsOpen(false)}
+            >
+              <Heart size={24} />
+              <span className="text-[10px] uppercase tracking-widest">{t("favorites")}</span>
+            </NavLink>
           </div>
 
+          {/* Mobile Language Switch */}
+          <select
+            onChange={(e) => i18n.changeLanguage(e.target.value)}
+            value={i18n.language}
+            className="bg-black border border-gray-700 text-white text-sm px-2 py-2 rounded"
+          >
+            <option value="en">English</option>
+            <option value="hi">Hindi</option>
+            <option value="ml">Malayalam</option>
+          </select>
+
           {!isAuthenticated && (
-            <div className="mt-2">
-              <button
-                onClick={() => loginWithRedirect()}
-                className="bg-white text-black w-full py-3 rounded-sm font-bold"
-              >
-                LOGIN
-              </button>
-            </div>
+            <button
+              onClick={() => loginWithRedirect()}
+              className="bg-white text-black w-full py-3 rounded-sm font-bold"
+            >
+              {t("login")}
+            </button>
           )}
         </div>
       )}
