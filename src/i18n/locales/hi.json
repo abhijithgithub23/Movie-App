@@ -6,5 +6,35 @@
   "search": "खोजें",
   "login": "लॉगिन",
   "logout": "लॉगआउट",
-  "addMedia": "मीडिया जोड़ें"
+  "addMedia": "मीडिया जोड़ें",
+
+  "brand": "CINEVIA",
+  "description": "फिल्मों, टीवी शो और मनोरंजन के लिए आपका अंतिम गंतव्य। कहीं भी, कभी भी अपने पसंदीदा कंटेंट का आनंद लें।",
+  "social": {
+    "facebook": "फेसबुक",
+    "twitter": "ट्विटर",
+    "instagram": "इंस्टाग्राम",
+    "youtube": "यूट्यूब"
+  },
+  "links": {
+    "explore": "एक्सप्लोर करें",
+    "home": "होम",
+    "movies": "फिल्में",
+    "tvShows": "टीवी शो",
+    "favorites": "पसंदीदा",
+    "support": "सहायता",
+    "helpCenter": "हेल्प सेंटर",
+    "contactUs": "संपर्क करें",
+    "devices": "डिवाइस",
+    "account": "खाता",
+    "legal": "कानूनी",
+    "privacyPolicy": "गोपनीयता नीति",
+    "termsOfService": "सेवा की शर्तें",
+    "cookies": "कुकीज़",
+    "corporateInfo": "कॉर्पोरेट जानकारी"
+  },
+  "footerBottom": {
+    "rights": "सर्वाधिकार सुरक्षित।",
+    "madeWith": "React और Tailwind के साथ बनाया गया"
+  }
 }
