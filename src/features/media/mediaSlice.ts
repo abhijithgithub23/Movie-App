@@ -102,8 +102,7 @@ const mediaSlice = createSlice({
       state.customMovies.unshift(newMedia);
       state.edited.push(newMedia); 
 
-      // 2. Add directly to the live view arrays so it shows up immediately
-      state.trending.unshift(newMedia);
+      // 2. Add directly to the live view arrays (Movies or TV only)
       if (newMedia.media_type === 'tv') {
         state.tvShows.unshift(newMedia);
       } else {
@@ -147,7 +146,7 @@ const mediaSlice = createSlice({
     const mergeApiWithUserData = (
       fetched: Media[], 
       state: MediaState, 
-      listType: 'movie' | 'tv' | 'all'
+      listType: 'movie' | 'tv' | 'trending'
     ) => {
       // 1. Filter out deleted API items and apply edits
       let filteredApi = fetched.filter((m) => !state.deleted.includes(m.id));
@@ -155,15 +154,18 @@ const mediaSlice = createSlice({
         (m) => state.edited.find((e) => String(e.id) === String(m.id)) || m
       );
 
-      // 2. Get relevant custom items that haven't been deleted
-      let relevantCustom = state.customMovies.filter((m) => !state.deleted.includes(m.id));
-      if (listType === 'movie') {
-        relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
-      } else if (listType === 'tv') {
-        relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv');
+      // 2. Get relevant custom items that haven't been deleted (Skip if list is trending)
+      let relevantCustom: Media[] = [];
+      if (listType !== 'trending') {
+        relevantCustom = state.customMovies.filter((m) => !state.deleted.includes(m.id));
+        if (listType === 'movie') {
+          relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
+        } else if (listType === 'tv') {
+          relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv');
+        }
       }
 
-      // 3. Put custom items at the top, followed by the API items
+      // 3. Put custom items at the top (if any), followed by the API items
       return [...relevantCustom, ...filteredApi];
     };
 
@@ -174,7 +176,8 @@ const mediaSlice = createSlice({
       })
       .addCase(getTrending.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.trending = "succeeded";
-        state.trending = mergeApiWithUserData(action.payload, state, 'all');
+        // 'trending' passed here to skip adding custom movies
+        state.trending = mergeApiWithUserData(action.payload, state, 'trending');
       })
       .addCase(getTrending.rejected, (state) => {
         state.status.trending = "failed";
