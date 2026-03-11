@@ -35,6 +35,39 @@
     --btn-text: 15 23 42;      /* slate-900 */
     --card-bg: 30 41 59;       /* slate-800 */
   }
+
+  /* Dracula Theme */
+  [data-theme="dracula"] {
+    --bg-main: 20 5 5;         /* Very dark reddish-black */
+    --bg-nav: 20 5 5;          
+    --text-main: 254 226 226;  /* Soft red-tinted white */
+    --text-muted: 248 113 113; /* Muted vibrant red */
+    --btn-bg: 220 38 38;       /* Bright crimson red */
+    --btn-text: 255 255 255;   /* Pure white */
+    --card-bg: 69 10 10;       /* Lighter dark red for cards */
+  }
+
+  /* Forest Theme */
+  [data-theme="forest"] {
+    --bg-main: 20 35 28;       /* deep moody green */
+    --bg-nav: 20 35 28;
+    --text-main: 234 240 236;  /* soft minty white */
+    --text-muted: 139 168 152; /* muted sage */
+    --btn-bg: 74 222 128;      /* bright emerald */
+    --btn-text: 20 35 28;      /* dark green text */
+    --card-bg: 34 56 46;       /* medium green */
+  }
+
+  /* Solarized Dark Theme */
+  [data-theme="solarized"] {
+    --bg-main: 0 43 54;        /* deep teal */
+    --bg-nav: 0 43 54;
+    --text-main: 147 161 161;  /* soft cyan-gray */
+    --text-muted: 88 110 117;  /* darker cyan-gray */
+    --btn-bg: 181 137 0;       /* solarized gold */
+    --btn-text: 0 43 54;       
+    --card-bg: 7 54 66;        /* slightly lighter teal */
+  }
 }
 
 .hide-scrollbar {

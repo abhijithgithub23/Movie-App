@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { getTrending } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
+// import { useTheme } from "../context/ThemeContext"; 
 
 const Home = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -17,6 +18,8 @@ const Home = () => {
   const [bgIndex, setBgIndex] = useState(0);
   const [textIndex, setTextIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
+
+  // const { theme } = useTheme();
 
   useEffect(() => {
     dispatch(getTrending());
@@ -90,8 +93,8 @@ const Home = () => {
           );
         })}
 
-        {/* UPDATED: Gradient fading into the main background color */}
-        <div className="absolute inset-0 bg-gradient-to-t from-main via-main/60 to-transparent z-10" />
+        {/*  GRADIENT */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10" />
 
         {/* HERO TEXT CONTAINER */}
         <div

@@ -97,6 +97,9 @@ const Navbar = () => {
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
                 <option value="midnight">Midnight</option>
+                <option value="dracula">Dracula</option>
+                <option value="forest">Forest</option>
+                <option value="solarized">Solarized</option>
               </select>
 
               <select
