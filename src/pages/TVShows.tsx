@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next";
 import { getTVShows } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
+// import { useTheme } from "../context/ThemeContext"; // <-- IMPORT THEME CONTEXT
 
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { i18n } = useTranslation();
+  // const { theme } = useTheme(); // <-- USE THEME
 
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
@@ -73,7 +75,7 @@ const TVShows = () => {
   // NEW: Display loading spinner on initial fetch or language switch
   if (status === "loading" && page === 1) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh] bg-black">
+      <div className="flex items-center justify-center min-h-[80vh] bg-main transition-colors duration-300">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
       </div>
     );
@@ -82,7 +84,7 @@ const TVShows = () => {
   // Fallback if no shows exist after loading finishes
   if (!shows.length || !trendingHeroShows.length) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh] bg-black text-gray-400">
+      <div className="flex items-center justify-center min-h-[80vh] bg-main text-text-muted transition-colors duration-300">
         No TV shows found.
       </div>
     );
@@ -94,9 +96,10 @@ const TVShows = () => {
   };
 
   return (
-    <div className="bg-black text-white min-h-screen pt-2">
+    // UPDATED: bg-main and text-text-main
+    <div className="bg-main text-text-main min-h-screen pt-2 transition-colors duration-300">
       {/* CINEMATIC HERO SECTION */}
-      <div className="relative h-[80vh] w-full overflow-hidden flex items-center bg-black">
+      <div className="relative h-[80vh] w-full overflow-hidden flex items-center bg-main">
         {trendingHeroShows.map((item, i) => {
           const isActive = i === activeIndex;
 
@@ -116,24 +119,28 @@ const TVShows = () => {
                     : "none",
                 }}
               />
-              {/* Gradient to blend into the rest of the page */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+              
+              {/* CONDITIONAL GRADIENTS: Hidden on light theme */}
               <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+             
 
               {/* Content Split Layout */}
               <div className="relative z-20 w-full px-8 md:px-16 flex flex-col md:flex-row items-center justify-between gap-12">
                 
                 {/* Left Side: Text Content */}
                 <div className="flex-1 max-w-2xl">
-                  <div className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-indigo-400 uppercase bg-indigo-500/10 border border-indigo-500/20 rounded-full backdrop-blur-sm">
+                  {/* UPDATED: Badge colors */}
+                  <div className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-text-main uppercase bg-text-muted/10 border border-text-muted/20 rounded-full backdrop-blur-sm">
                     Top 10 TV Shows • #{i + 1}
                   </div>
                   
-                  <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight drop-shadow-2xl">
+                  {/* UPDATED: Maintained white text for readability against images */}
+                  <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight drop-shadow-2xl text-white">
                     {item.title || item.name}
                   </h1>
                   
-                  <div className="flex items-center gap-4 mb-6 text-sm text-gray-300 font-medium">
+                  {/* UPDATED: text-text-muted */}
+                  <div className="flex items-center gap-4 mb-6 text-sm text-text-muted font-medium drop-shadow-md">
                     <span className="flex items-center gap-1 text-yellow-400">
                       ★ {item.vote_average?.toFixed(1) || "N/A"}
                     </span>
@@ -142,23 +149,26 @@ const TVShows = () => {
                     <span>{item.first_air_date?.substring(0, 4) || "N/A"}</span>
                   </div>
 
-                  <p className="text-gray-300 text-lg mb-8 line-clamp-3 md:line-clamp-4 drop-shadow-md leading-relaxed">
+                  {/* UPDATED: text-gray-200 for slight contrast boost over images */}
+                  <p className="text-gray-200 text-lg mb-8 line-clamp-3 md:line-clamp-4 drop-shadow-lg leading-relaxed font-medium">
                     {item.overview}
                   </p>
 
                   <div className="flex gap-4">
+                    {/* UPDATED: Primary Button */}
                     <button
                       onClick={() => handleHeroClick(item.id)}
-                      className="flex items-center gap-2 bg-indigo-600 text-white font-semibold px-8 py-3 rounded-full shadow-lg shadow-indigo-500/30 hover:bg-indigo-500 transition-all duration-300 hover:scale-105"
+                      className="flex items-center gap-2 bg-btn-bg text-btn-text font-semibold px-8 py-3 rounded-full shadow-lg hover:opacity-90 transition-all duration-300 hover:scale-105"
                     >
                       <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                         <path d="M6 4l15 8-15 8z" />
                       </svg>
                       Watch Trailer
                     </button>
+                    {/* UPDATED: Secondary Button */}
                     <button
                       onClick={() => handleHeroClick(item.id)}
-                      className="bg-white/10 text-white font-semibold px-8 py-3 rounded-full hover:bg-white/20 transition-all duration-300 backdrop-blur-md border border-white/10"
+                      className="bg-card-bg/60 text-text-main font-semibold px-8 py-3 rounded-full hover:bg-card-bg transition-all duration-300 backdrop-blur-md border border-text-muted/30"
                     >
                       Details
                     </button>
@@ -167,7 +177,8 @@ const TVShows = () => {
 
                 {/* Right Side: Featured Poster */}
                 <div className="hidden md:block w-full max-w-sm flex-shrink-0 perspective-1000">
-                  <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-white/10 transform transition-transform duration-700 hover:scale-105 hover:-rotate-2 cursor-pointer"
+                  {/* UPDATED: Shadow and border match theme */}
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-main/80 border border-text-muted/20 transform transition-transform duration-700 hover:scale-105 hover:-rotate-2 cursor-pointer"
                        onClick={() => handleHeroClick(item.id)}>
                     <img
                       src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
