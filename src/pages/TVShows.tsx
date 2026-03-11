@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next"; // <-- 1. Added import
+import { useTranslation } from "react-i18next";
 import { getTVShows } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
@@ -9,7 +9,7 @@ import MediaRow from "../components/Media/MediaRow";
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { i18n } = useTranslation(); // <-- 2. Initialize i18n
+  const { i18n } = useTranslation();
 
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
@@ -17,9 +17,9 @@ const TVShows = () => {
   // State to track pagination and language changes
   const [page, setPage] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [prevLanguage, setPrevLanguage] = useState(i18n.language); // <-- NEW: Track previous language
+  const [prevLanguage, setPrevLanguage] = useState(i18n.language);
 
-  // <-- NEW: Render-phase state update to reset page on language change safely
+  // Render-phase state update to reset page on language change safely
   if (i18n.language !== prevLanguage) {
     setPrevLanguage(i18n.language);
     setPage(1);
@@ -43,7 +43,6 @@ const TVShows = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const totalSlides = trendingHeroShows.length;
 
-  // <-- UPDATED: Triggers on mount and whenever the language changes
   useEffect(() => {
     dispatch(getTVShows(1)); 
   }, [dispatch, i18n.language]);
@@ -71,7 +70,23 @@ const TVShows = () => {
     return () => clearInterval(interval);
   }, [totalSlides]);
 
-  if (!shows.length || !trendingHeroShows.length) return null;
+  // NEW: Display loading spinner on initial fetch or language switch
+  if (status === "loading" && page === 1) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] bg-black">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
+      </div>
+    );
+  }
+
+  // Fallback if no shows exist after loading finishes
+  if (!shows.length || !trendingHeroShows.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] bg-black text-gray-400">
+        No TV shows found.
+      </div>
+    );
+  }
 
   // Helper for Hero Navigation
   const handleHeroClick = (id: string | number) => {

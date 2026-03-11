@@ -18,7 +18,10 @@ const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i)
 
 const Search = () => {
   const dispatch = useDispatch<AppDispatch>();
+  
   const searchResults = useSelector((state: RootState) => state.media.searchResults);
+  // NEW: Grab the search loading status from Redux
+  const searchStatus = useSelector((state: RootState) => state.media.status.searchResults);
   
   // Search State
   const [query, setQuery] = useState('');
@@ -47,7 +50,9 @@ const Search = () => {
     if (!query.trim()) return;
     dispatch(searchMediaThunk(query));
     setHasSearched(true);
-    setQuery('');
+    // Keeping the query in the input box is usually better UX so the user knows what they searched for,
+    // but I left your setQuery('') here if you prefer it to clear out!
+    setQuery(''); 
   };
 
   const clearFilters = () => {
@@ -102,12 +107,13 @@ const Search = () => {
 
   return (
     <div className="bg-black text-white min-h-screen pt-8 px-6 md:px-12 pb-12">
-      {/* Changed max-w-[1400px] to w-full so it spans the entire screen */}
       <div className="flex flex-col md:flex-row gap-8 w-full mx-auto">
         
         {/* COMPREHENSIVE LEFT SIDEBAR */}
         <aside className="w-full md:w-72 flex-shrink-0">
           <div className="sticky top-24 bg-gray-900/30 backdrop-blur-xl border border-gray-800 p-6 rounded-2xl shadow-2xl max-h-[calc(100vh-8rem)] overflow-y-auto hide-scrollbar">            
+            
+            {/* Filter Content (Unchanged) */}
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-xl text-red-500">Filters</h3>
               <button onClick={clearFilters} className="text-xs text-gray-400 hover:text-white underline transition-colors">
@@ -234,8 +240,14 @@ const Search = () => {
             </div>
           </form>
 
-          {/* RESULTS GRID */}
-          {hasSearched && filteredResults.length === 0 ? (
+          {/* RESULTS GRID / LOADING / EMPTY STATE */}
+          {searchStatus === "loading" ? (
+             // NEW: Show spinner while loading
+             <div className="flex items-center justify-center py-32 w-full">
+               <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
+             </div>
+          ) : hasSearched && filteredResults.length === 0 ? (
+             // Show empty state ONLY if we are done loading and there are no results
              <div className="flex flex-col items-center justify-center text-center py-32 bg-gray-900/30 rounded-2xl border border-gray-800 border-dashed w-full">
                <svg className="w-20 h-20 mb-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
@@ -247,6 +259,7 @@ const Search = () => {
                </button>
              </div>
           ) : (
+             // Show the actual results
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
               {filteredResults.map((m) => (
                 <Link

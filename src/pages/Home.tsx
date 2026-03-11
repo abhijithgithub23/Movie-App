@@ -12,20 +12,20 @@ const Home = () => {
   const { i18n } = useTranslation(); 
 
   const trending = useSelector((state: RootState) => state.media.trending);
-  // const status = useSelector((state: RootState) => state.media.status.trending);
+  // Uncommented the status selector to track the loading state
+  const status = useSelector((state: RootState) => state.media.status.trending);
 
   const [bgIndex, setBgIndex] = useState(0);
   const [textIndex, setTextIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
 
-  // <-- NEW: Added console.log to see the fetched data
   useEffect(() => {
     if (trending.length > 0) {
       // console.log("Trending data currently in Redux (from API):", trending);
     }
   }, [trending]);
 
-  // <-- UPDATED: Now triggers on mount AND whenever i18n.language changes
+  // whenever i18n.language changes
   useEffect(() => {
     dispatch(getTrending());
   }, [dispatch, i18n.language]);
@@ -50,7 +50,15 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [trending]);
 
-  if (!trending.length) return null;
+  // NEW: Display a full-height loading spinner while fetching data
+  // This prevents the footer from jumping up to the top of the page
+  if (status === "loading" || !trending.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] bg-black pt-2">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
+      </div>
+    );
+  }
 
   const textHero = trending[textIndex];
   

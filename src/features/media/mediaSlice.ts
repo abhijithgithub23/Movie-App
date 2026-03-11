@@ -7,8 +7,8 @@ interface MediaState {
   movies: Media[];
   tvShows: Media[];
   customMovies: Media[];  // persisted
-  edited: Media[];        // persisted edits
-  deleted: (string | number)[]; // persisted deletions
+  edited: Media[];        // persisted 
+  deleted: (string | number)[]; // persisted 
   searchResults: Media[];
   status: {
     trending: "idle" | "loading" | "succeeded" | "failed";

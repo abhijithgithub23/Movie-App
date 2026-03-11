@@ -9,7 +9,7 @@ const BASE_URL = "https://api.themoviedb.org/3";
 export const tmdbApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    Authorization: `Bearer ${READ_ACCESS_TOKEN}`, // optional for public endpoints
+    Authorization: `Bearer ${READ_ACCESS_TOKEN}`, 
     "Content-Type": "application/json",
   },
   params: {
