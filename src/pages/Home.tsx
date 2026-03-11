@@ -19,13 +19,6 @@ const Home = () => {
   const [textVisible, setTextVisible] = useState(true);
 
   useEffect(() => {
-    if (trending.length > 0) {
-      // console.log("Trending data currently in Redux (from API):", trending);
-    }
-  }, [trending]);
-
-  // whenever i18n.language changes
-  useEffect(() => {
     dispatch(getTrending());
   }, [dispatch, i18n.language]);
  
@@ -34,7 +27,6 @@ const Home = () => {
 
     const interval = setInterval(() => {
       setBgIndex((prevBg) => {
-        // FIX: Synchronized to 10 to match the render slice
         const nextIndex = (prevBg + 1) % Math.min(trending.length, 10);
         setTextVisible(false);
         setTimeout(() => {
@@ -52,7 +44,7 @@ const Home = () => {
 
   if (status === "loading" || !trending.length) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh] bg-black pt-2">
+      <div className="flex items-center justify-center min-h-[80vh] bg-main pt-2">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
       </div>
     );
@@ -68,11 +60,11 @@ const Home = () => {
   const movies = trending.filter((m) => m.media_type === "movie");
   const tv = trending.filter((m) => m.media_type === "tv");
   const highRated = trending.filter((m) => (m.vote_average ?? 0) > 7);
-  // Synchronized to 10
   const totalSlides = Math.min(trending.length, 10);
 
   return (
-    <div className="bg-black text-white min-h-screen pt-2">
+    // UPDATED: bg-main and text-text-main
+    <div className="bg-main text-text-main min-h-screen pt-2 transition-colors duration-300">
       {/* HERO SECTION */}
       <div className="relative h-[75vh] overflow-hidden">
         {trending.slice(0, 10).map((item, i) => {
@@ -98,7 +90,8 @@ const Home = () => {
           );
         })}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10" />
+        {/* UPDATED: Gradient fading into the main background color */}
+        <div className="absolute inset-0 bg-gradient-to-t from-main via-main/60 to-transparent z-10" />
 
         {/* HERO TEXT CONTAINER */}
         <div
@@ -106,20 +99,22 @@ const Home = () => {
             textVisible ? "opacity-100 duration-1000" : "opacity-0 duration-500"
           }`}
         >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+          {/* UPDATED TEXT COLOR */}
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg text-white">
             {textHero.title || textHero.name}
           </h1>
 
-          <p className="text-gray-300 mb-6 line-clamp-3 drop-shadow-md">
+          <p className="text-gray-200 mb-6 line-clamp-3 drop-shadow-md">
             {textHero.overview}
           </p>
 
           <div className="flex gap-4">
+            {/* UPDATED BUTTON */}
             <button 
               onClick={handleHeroClick}
-              className="flex items-center gap-2 bg-white/90 text-black font-medium px-6 py-2 rounded-md shadow-sm hover:bg-white transition-colors duration-300"
+              className="flex items-center gap-2 bg-btn-bg/90 text-btn-text font-medium px-6 py-2 rounded-md shadow-sm hover:bg-btn-bg transition-colors duration-300"
             >
-              <svg className="w-4 h-4 text-black fill-current" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-btn-text fill-current" viewBox="0 0 24 24">
                 <path d="M6 4l15 8-15 8z" />
               </svg>
               Play
@@ -127,7 +122,7 @@ const Home = () => {
 
             <button 
               onClick={handleHeroClick}
-              className="bg-gray-700/80 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors backdrop-blur-sm"
+              className="bg-card-bg/80 text-text-main border border-text-muted/30 px-6 py-3 rounded-lg font-semibold hover:bg-card-bg transition-colors backdrop-blur-sm"
             >
               More Info
             </button>

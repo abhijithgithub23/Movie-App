@@ -2,18 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Default (Dark) */
+  :root, [data-theme="dark"] {
+    --bg-main: 0 0 0;          /* black */
+    --bg-nav: 0 0 0;           /* black */
+    --text-main: 255 255 255;  /* white */
+    --text-muted: 156 163 175; /* gray-400 */
+    --btn-bg: 255 255 255;     /* white button */
+    --btn-text: 0 0 0;         /* black text */
+    --card-bg: 31 41 55;       /* gray-800 */
+  }
 
+  /* Light Theme */
+  [data-theme="light"] {
+    --bg-main: 243 244 246;    /* gray-100 */
+    --bg-nav: 255 255 255;     /* white */
+    --text-main: 17 24 39;     /* gray-900 */
+    --text-muted: 75 85 99;    /* gray-600 */
+    --btn-bg: 0 0 0;           /* black button */
+    --btn-text: 255 255 255;   /* white text */
+    --card-bg: 255 255 255;    /* white */
+  }
 
-/* Add this to your global CSS file */
+  /* Custom Midnight Theme */
+  [data-theme="midnight"] {
+    --bg-main: 15 23 42;       /* slate-900 */
+    --bg-nav: 15 23 42;        /* slate-900 */
+    --text-main: 248 250 252;  /* slate-50 */
+    --text-muted: 148 163 184; /* slate-400 */
+    --btn-bg: 56 189 248;      /* sky-400 */
+    --btn-text: 15 23 42;      /* slate-900 */
+    --card-bg: 30 41 59;       /* slate-800 */
+  }
+}
+
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
 }
-
 
 @keyframes fadeIn {
   from {
