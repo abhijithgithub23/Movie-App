@@ -23,7 +23,7 @@ tmdbApi.interceptors.request.use((config) => {
     ...config.params,
     language: i18n.language, // automatically use selected language
   };
-  return config;
+  return config; 
 });
 
 // Helper functions

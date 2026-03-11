@@ -76,7 +76,6 @@ export const getMovies = createAsyncThunk<{ results: Media[]; page: number }, nu
   }
 );
 
-// UPDATED: Added pagination parameters and return types for TV Shows
 export const getTVShows = createAsyncThunk<{ results: Media[]; page: number }, number | void>(
   "media/getTVShows",
   async (pageArg) => {
@@ -213,7 +212,6 @@ const mediaSlice = createSlice({
         state.status.movies = "failed";
       });
 
-    // UPDATED TV SHOWS BUILDER: Handles pagination appending
     builder
       .addCase(getTVShows.pending, (state) => {
         state.status.tvShows = "loading";
@@ -226,18 +224,17 @@ const mediaSlice = createSlice({
           action.payload.results, 
           state, 
           'tv', 
-          isFirstPage // Only include custom items on the first page
+          isFirstPage 
         );
 
         if (isFirstPage) {
           state.tvShows = processedNew;
         } else {
-          // Append new TV Shows, filtering out any accidental duplicates
           const existingIds = new Set(state.tvShows.map(m => String(m.id)));
           const uniqueNew = processedNew.filter(m => !existingIds.has(String(m.id)));
           state.tvShows = [...state.tvShows, ...uniqueNew];
         }
-      })
+      }) 
       .addCase(getTVShows.rejected, (state) => {
         state.status.tvShows = "failed";
       });

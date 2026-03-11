@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // <-- 1. Added import
 import { getTVShows } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
@@ -8,13 +9,21 @@ import MediaRow from "../components/Media/MediaRow";
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { i18n } = useTranslation(); // <-- 2. Initialize i18n
 
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
 
-  // NEW: State to track pagination
+  // State to track pagination and language changes
   const [page, setPage] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [prevLanguage, setPrevLanguage] = useState(i18n.language); // <-- NEW: Track previous language
+
+  // <-- NEW: Render-phase state update to reset page on language change safely
+  if (i18n.language !== prevLanguage) {
+    setPrevLanguage(i18n.language);
+    setPage(1);
+  }
 
   // useMemo prevents unnecessary re-renders and casts media_type correctly for TypeScript
   const shows = useMemo(
@@ -34,13 +43,12 @@ const TVShows = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const totalSlides = trendingHeroShows.length;
 
+  // <-- UPDATED: Triggers on mount and whenever the language changes
   useEffect(() => {
-    if (status === "idle") {
-      dispatch(getTVShows(1)); // Make sure to initialize page 1
-    }
-  }, [dispatch, status]);
+    dispatch(getTVShows(1)); 
+  }, [dispatch, i18n.language]);
 
-  // NEW: Load more handler for infinity scrolling
+  // Load more handler for infinity scrolling
   const handleLoadMore = async () => {
     // Prevent multiple simultaneous fetches
     if (status !== "loading" && !isFetchingMore) {
@@ -162,7 +170,6 @@ const TVShows = () => {
 
       {/* CONTENT ROWS */}
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
-        {/* NEW: Passed the handleLoadMore to MediaRow */}
         <MediaRow 
           title="Discover TV Shows" 
           media={shows} 

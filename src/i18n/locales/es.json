@@ -1,0 +1,40 @@
+{
+  "home": "Inicio",
+  "movies": "Películas",
+  "tvShows": "Series",
+  "favorites": "Favoritos",
+  "search": "Buscar",
+  "login": "Iniciar sesión",
+  "logout": "Cerrar sesión",
+  "addMedia": "Agregar contenido",
+
+  "brand": "CINEVIA",
+  "description": "Tu destino definitivo para películas, series y entretenimiento. Transmite tu contenido favorito en cualquier lugar y en cualquier momento.",
+  "social": {
+    "facebook": "Facebook",
+    "twitter": "Twitter",
+    "instagram": "Instagram",
+    "youtube": "YouTube"
+  },
+  "links": {
+    "explore": "Explorar",
+    "home": "Inicio",
+    "movies": "Películas",
+    "tvShows": "Series",
+    "favorites": "Favoritos",
+    "support": "Soporte",
+    "helpCenter": "Centro de ayuda",
+    "contactUs": "Contáctanos",
+    "devices": "Dispositivos",
+    "account": "Cuenta",
+    "legal": "Legal",
+    "privacyPolicy": "Política de privacidad",
+    "termsOfService": "Términos de servicio",
+    "cookies": "Cookies",
+    "corporateInfo": "Información corporativa"
+  },
+  "footerBottom": {
+    "rights": "Todos los derechos reservados.",
+    "madeWith": "Hecho con React y Tailwind"
+  }
+}

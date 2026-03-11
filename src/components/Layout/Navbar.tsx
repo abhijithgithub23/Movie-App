@@ -99,6 +99,7 @@ const Navbar = () => {
               <option value="en">EN</option>
               <option value="hi">HI</option>
               <option value="ml">ML</option>
+              <option value="es">ES</option>
             </select>
 
             {/* Auth */}
@@ -178,6 +179,7 @@ const Navbar = () => {
             <option value="en">English</option>
             <option value="hi">Hindi</option>
             <option value="ml">Malayalam</option>
+            <option value="es">Español</option>
           </select>
 
           {!isAuthenticated && (

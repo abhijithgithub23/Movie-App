@@ -1,24 +1,34 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom"; // Added
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next"; 
 import { getTrending } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
 
 const Home = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate(); // Added
+  const navigate = useNavigate();
+  const { i18n } = useTranslation(); 
 
   const trending = useSelector((state: RootState) => state.media.trending);
-  const status = useSelector((state: RootState) => state.media.status.trending);
+  // const status = useSelector((state: RootState) => state.media.status.trending);
 
   const [bgIndex, setBgIndex] = useState(0);
   const [textIndex, setTextIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
 
+  // <-- NEW: Added console.log to see the fetched data
   useEffect(() => {
-    if (status === "idle") dispatch(getTrending());
-  }, [status, dispatch]);
+    if (trending.length > 0) {
+      // console.log("Trending data currently in Redux (from API):", trending);
+    }
+  }, [trending]);
+
+  // <-- UPDATED: Now triggers on mount AND whenever i18n.language changes
+  useEffect(() => {
+    dispatch(getTrending());
+  }, [dispatch, i18n.language]);
 
   useEffect(() => {
     if (!trending.length) return;
@@ -44,7 +54,6 @@ const Home = () => {
 
   const textHero = trending[textIndex];
   
-  // Helper for Hero Navigation
   const handleHeroClick = () => {
     const type = textHero.media_type || (textHero.title ? "movie" : "tv");
     navigate(`/details/${type}/${textHero.id}`);

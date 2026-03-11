@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getMovies } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
@@ -21,13 +22,22 @@ interface MovieData {
 const Movies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
 
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
 
-  // NEW: State to track pagination
+  // State to track pagination and language changes
   const [page, setPage] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [prevLanguage, setPrevLanguage] = useState(i18n.language); // <-- NEW: Track previous language
+
+  // <-- NEW: React-recommended pattern to reset state on context/prop change
+  // If the language changes, reset the page state DURING render to avoid double-renders.
+  if (i18n.language !== prevLanguage) {
+    setPrevLanguage(i18n.language);
+    setPage(1);
+  }
 
   const movies = useMemo(
     () => rawMovies.map((m: MovieData) => ({ ...m, media_type: "movie" as const })),
@@ -45,15 +55,13 @@ const Movies = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const totalSlides = trendingHeroMovies.length;
 
+  // <-- UPDATED: Removed setPage(1) from here to fix the ESLint error.
   useEffect(() => {
-    if (status === "idle") {
-      dispatch(getMovies(1));
-    }
-  }, [status, dispatch]);
+    dispatch(getMovies(1));
+  }, [dispatch, i18n.language]); 
 
-  // NEW: Load more handler for infinity scrolling
+  // Load more handler for infinity scrolling
   const handleLoadMore = async () => {
-    // Prevent multiple simultaneous fetches
     if (status !== "loading" && !isFetchingMore) {
       setIsFetchingMore(true);
       const nextPage = page + 1;
@@ -161,7 +169,6 @@ const Movies = () => {
       </div>
 
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
-        {/* NEW: Passed the handleLoadMore to MediaRow */}
         <MediaRow 
            title="Discover Movies" 
            media={movies} 
@@ -172,4 +179,4 @@ const Movies = () => {
   );
 };
 
-export default Movies; 
+export default Movies;
