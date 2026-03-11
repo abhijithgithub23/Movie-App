@@ -12,7 +12,6 @@ const Home = () => {
   const { i18n } = useTranslation(); 
 
   const trending = useSelector((state: RootState) => state.media.trending);
-  // Uncommented the status selector to track the loading state
   const status = useSelector((state: RootState) => state.media.status.trending);
 
   const [bgIndex, setBgIndex] = useState(0);
@@ -29,13 +28,14 @@ const Home = () => {
   useEffect(() => {
     dispatch(getTrending());
   }, [dispatch, i18n.language]);
-
+ 
   useEffect(() => {
     if (!trending.length) return;
 
     const interval = setInterval(() => {
       setBgIndex((prevBg) => {
-        const nextIndex = (prevBg + 1) % Math.min(trending.length, 6);
+        // FIX: Synchronized to 10 to match the render slice
+        const nextIndex = (prevBg + 1) % Math.min(trending.length, 10);
         setTextVisible(false);
         setTimeout(() => {
           setTextIndex(nextIndex);
@@ -50,8 +50,6 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [trending]);
 
-  // NEW: Display a full-height loading spinner while fetching data
-  // This prevents the footer from jumping up to the top of the page
   if (status === "loading" || !trending.length) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] bg-black pt-2">
@@ -70,13 +68,14 @@ const Home = () => {
   const movies = trending.filter((m) => m.media_type === "movie");
   const tv = trending.filter((m) => m.media_type === "tv");
   const highRated = trending.filter((m) => (m.vote_average ?? 0) > 7);
-  const totalSlides = Math.min(trending.length, 6);
+  // Synchronized to 10
+  const totalSlides = Math.min(trending.length, 10);
 
   return (
     <div className="bg-black text-white min-h-screen pt-2">
       {/* HERO SECTION */}
       <div className="relative h-[75vh] overflow-hidden">
-        {trending.slice(0, 6).map((item, i) => {
+        {trending.slice(0, 10).map((item, i) => {
           let position = "100%";
           if (i === bgIndex) position = "0%";
           else if (i === (bgIndex - 1 + totalSlides) % totalSlides) position = "-100%";

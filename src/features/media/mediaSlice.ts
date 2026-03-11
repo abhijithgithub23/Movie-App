@@ -21,7 +21,7 @@ interface MediaState {
 const initialState: MediaState = {
   trending: [],
   movies: [],
-  tvShows: [],
+  tvShows: [], 
   customMovies: [],
   edited: [],
   deleted: [],

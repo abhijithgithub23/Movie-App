@@ -23,7 +23,6 @@ function App() {
       <div className="min-h-screen bg-black text-white font-sans">
         <Navbar />
 
-        {/* pt-16 prevents navbar overlap */}
         <main className="pt-16">
           <Routes>
             <Route path="/" element={<AuthGuard><Home /></AuthGuard>} />
