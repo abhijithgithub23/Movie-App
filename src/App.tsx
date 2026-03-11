@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthGuard } from './auth0/AuthGuard';
 import Navbar from './components/Layout/Navbar';
 
+//helper component
+import ScrollToTop from './components/Layout/ScrollToTop';
+
 // Pages
 import Home from './pages/Home';
 import Movies from './pages/Movies';
@@ -16,6 +19,7 @@ import Footer from './components/Layout/Footer';
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-black text-white font-sans">
         <Navbar />
 
