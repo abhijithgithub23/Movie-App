@@ -35,7 +35,9 @@ export const searchMedia = (query: string) =>
 export const fetchDetails = (type: "movie" | "tv", id: number | string) =>
   tmdbApi.get(`/${type}/${id}`);
 
-// Optional: test function
+
+
+//----------------------------------------------FOR DEBUGGING PURPOSES ONLY
 // async function testTMDB() {
 //   try {
 //     const trending = await fetchTrending();

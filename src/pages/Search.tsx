@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { searchMediaThunk } from '../features/media/mediaSlice';
+// Import the new clearSearchResults action
+import { searchMediaThunk, clearSearchResults } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
 import { Link } from 'react-router-dom';
 
@@ -20,7 +21,6 @@ const Search = () => {
   const dispatch = useDispatch<AppDispatch>();
   
   const searchResults = useSelector((state: RootState) => state.media.searchResults);
-  // NEW: Grab the search loading status from Redux
   const searchStatus = useSelector((state: RootState) => state.media.status.searchResults);
   
   // Search State
@@ -36,23 +36,27 @@ const Search = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
 
   // Fetch Genres
-  useEffect(() => {
+  useState(() => {
     fetch(
       `https://api.themoviedb.org/3/genre/movie/list?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
     )
       .then((res) => res.json())
       .then((data) => setGenres(data.genres))
       .catch(console.error);
-  }, []);
+  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
     dispatch(searchMediaThunk(query));
     setHasSearched(true);
-    // Keeping the query in the input box is usually better UX so the user knows what they searched for,
-    // but I left your setQuery('') here if you prefer it to clear out!
-    setQuery(''); 
+  };
+
+  const handleClearSearch = () => {
+    setQuery('');
+    setHasSearched(false);
+    // NEW: Clear the Redux store results
+    dispatch(clearSearchResults());
   };
 
   const clearFilters = () => {
@@ -227,10 +231,33 @@ const Search = () => {
               <input
                 type="text"
                 placeholder="Search for Movies or TV shows....."
-                className="w-full pl-14 pr-32 py-5 bg-gray-900/30 border border-gray-800 rounded-2xl text-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-xl backdrop-blur-sm"
+                className="w-full pl-14 pr-40 py-5 bg-gray-900/30 border border-gray-800 rounded-2xl text-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-xl backdrop-blur-sm"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  const newQuery = e.target.value;
+                  setQuery(newQuery);
+                  // NEW: If the input becomes empty, clear Redux state directly
+                  if (!newQuery.trim()) {
+                    setHasSearched(false);
+                    dispatch(clearSearchResults());
+                  }
+                }}
               />
+              
+              {/* CLEAR BUTTON (Shows only when there's text) */}
+              {query && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-32 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors z-10"
+                  aria-label="Clear search"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+
               <button
                 type="submit"
                 className="absolute right-3 top-3 bottom-3 bg-indigo-600 px-8 rounded-xl font-bold hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/30"
@@ -241,8 +268,17 @@ const Search = () => {
           </form>
 
           {/* RESULTS GRID / LOADING / EMPTY STATE */}
-          {searchStatus === "loading" ? (
-             // NEW: Show spinner while loading
+          {!query.trim() ? (
+             // Show default empty state when there is no query
+             <div className="flex flex-col items-center justify-center text-center py-32 bg-gray-900/30 rounded-2xl border border-gray-800 border-dashed w-full">
+               <svg className="w-20 h-20 mb-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+               </svg>
+               <h2 className="text-3xl font-bold text-gray-300 mb-3">Ready to explore?</h2>
+               <p className="text-gray-500 max-w-md">Type a movie or TV show name above to start your search.</p>
+             </div>
+          ) : searchStatus === "loading" ? (
+             // Show spinner while loading
              <div className="flex items-center justify-center py-32 w-full">
                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
              </div>

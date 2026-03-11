@@ -6,9 +6,9 @@ interface MediaState {
   trending: Media[];
   movies: Media[];
   tvShows: Media[];
-  customMovies: Media[];  // persisted
-  edited: Media[];        // persisted 
-  deleted: (string | number)[]; // persisted 
+  customMovies: Media[];  
+  edited: Media[];        
+  deleted: (string | number)[]; 
   searchResults: Media[];
   status: {
     trending: "idle" | "loading" | "succeeded" | "failed";
@@ -34,62 +34,40 @@ const initialState: MediaState = {
   },
 };
 
-// Helper: fetch full details for TMDB items
-const fetchFullDetails = async (
-  items: Media[],
-  defaultMediaType: "movie" | "tv" = "movie"
-) => {
-  return Promise.all(
-    items.map(async (item) => {
-      if (String(item.id).startsWith("custom")) return item; // skip custom
-      try {
-        const mediaType = item.media_type || defaultMediaType;
-        const res = await tmdbApi.get(`/${mediaType}/${item.id}`);
-        return { ...item, ...res.data, media_type: mediaType } as Media;
-      } catch {
-        return { ...item, media_type: item.media_type || defaultMediaType };
-      }
-    })
-  );
-};
-
+// -----------------------------
 // Thunks
+// -----------------------------
+
+//  Trending
 export const getTrending = createAsyncThunk<Media[]>(
   "media/getTrending",
   async () => {
     const res = await tmdbApi.get("/trending/all/day");
-    return fetchFullDetails(res.data.results);
+    return res.data.results; // only basic info, NO fetchFullDetails
   }
 );
 
+//  Movies
 export const getMovies = createAsyncThunk<{ results: Media[]; page: number }, number | void>(
   "media/getMovies",
   async (pageArg) => {
-    const currentPage = typeof pageArg === "number" ? pageArg : 1;
-    
-    const res = await tmdbApi.get("/discover/movie", { params: { page: currentPage } });
-    const results = await fetchFullDetails(res.data.results, "movie");
-
-    console.log(`Fetched movies for page ${currentPage}:`, results);
-    
-    return { results, page: currentPage };
+    const page = typeof pageArg === "number" ? pageArg : 1;
+    const res = await tmdbApi.get("/discover/movie", { params: { page } });
+    return { results: res.data.results, page };
   }
 );
 
+//  TV Shows
 export const getTVShows = createAsyncThunk<{ results: Media[]; page: number }, number | void>(
   "media/getTVShows",
   async (pageArg) => {
-    const currentPage = typeof pageArg === "number" ? pageArg : 1;
-
-    const res = await tmdbApi.get("/discover/tv", { params: { page: currentPage } });
-    const results = await fetchFullDetails(res.data.results, "tv");
-
-    console.log(`Fetched TV Shows for page ${currentPage}:`, results);
-
-    return { results, page: currentPage };
+    const page = typeof pageArg === "number" ? pageArg : 1;
+    const res = await tmdbApi.get("/discover/tv", { params: { page } });
+    return { results: res.data.results, page };
   }
 );
 
+//  Search
 export const searchMediaThunk = createAsyncThunk<Media[], string>(
   "media/searchMedia",
   async (query) => {
@@ -97,6 +75,10 @@ export const searchMediaThunk = createAsyncThunk<Media[], string>(
     return res.data.results;
   }
 );
+
+// -----------------------------
+// Slice
+// -----------------------------
 
 const mediaSlice = createSlice({
   name: "media",
@@ -108,20 +90,15 @@ const mediaSlice = createSlice({
         id: `custom-${Date.now()}`,
         isCustom: true,
       };
-      
       state.customMovies.unshift(newMedia);
-      state.edited.push(newMedia); 
+      state.edited.push(newMedia);
 
-      if (newMedia.media_type === 'tv') {
-        state.tvShows.unshift(newMedia);
-      } else {
-        state.movies.unshift(newMedia);
-      }
+      if (newMedia.media_type === 'tv') state.tvShows.unshift(newMedia);
+      else state.movies.unshift(newMedia);
     },
 
     editMedia: (state, action: PayloadAction<Media>) => {
       const media = action.payload;
-
       const keys: Array<"trending" | "movies" | "tvShows" | "customMovies"> = [
         "trending",
         "movies",
@@ -147,7 +124,14 @@ const mediaSlice = createSlice({
       state.tvShows = state.tvShows.filter((m) => String(m.id) !== String(id));
       if (!state.deleted.includes(id)) state.deleted.push(id);
     },
+
+    // NEW: Action to clear search results when the input becomes empty
+    clearSearchResults: (state) => {
+      state.searchResults = [];
+      state.status.searchResults = "idle";
+    },
   },
+
   extraReducers: (builder) => {
     const mergeApiWithUserData = (
       fetched: Media[], 
@@ -155,103 +139,77 @@ const mediaSlice = createSlice({
       listType: 'movie' | 'tv' | 'trending',
       includeCustom: boolean = true
     ) => {
+      //  Remove deleted
       let filteredApi = fetched.filter((m) => !state.deleted.includes(m.id));
+
+      //  Merge edits
       filteredApi = filteredApi.map(
         (m) => state.edited.find((e) => String(e.id) === String(m.id)) || m
       );
 
+      //  Include custom items
       let relevantCustom: Media[] = [];
       if (listType !== 'trending' && includeCustom) {
         relevantCustom = state.customMovies.filter((m) => !state.deleted.includes(m.id));
-        if (listType === 'movie') {
-          relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
-        } else if (listType === 'tv') {
-          relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv');
-        }
+        if (listType === 'movie') relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
+        else if (listType === 'tv') relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv');
       }
 
       return [...relevantCustom, ...filteredApi];
     };
 
+    // --- Trending
     builder
-      .addCase(getTrending.pending, (state) => {
-        state.status.trending = "loading";
-      })
+      .addCase(getTrending.pending, (state) => { state.status.trending = "loading"; })
       .addCase(getTrending.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.trending = "succeeded";
         state.trending = mergeApiWithUserData(action.payload, state, 'trending');
       })
-      .addCase(getTrending.rejected, (state) => {
-        state.status.trending = "failed";
-      });
+      .addCase(getTrending.rejected, (state) => { state.status.trending = "failed"; });
 
+    // --- Movies
     builder
-      .addCase(getMovies.pending, (state) => {
-        state.status.movies = "loading";
-      })
+      .addCase(getMovies.pending, (state) => { state.status.movies = "loading"; })
       .addCase(getMovies.fulfilled, (state, action: PayloadAction<{ results: Media[]; page: number }>) => {
         state.status.movies = "succeeded";
         const isFirstPage = action.payload.page === 1;
-        
-        const processedNew = mergeApiWithUserData(
-          action.payload.results, 
-          state, 
-          'movie', 
-          isFirstPage 
-        );
+        const processed = mergeApiWithUserData(action.payload.results, state, 'movie', isFirstPage);
 
-        if (isFirstPage) {
-          state.movies = processedNew;
-        } else {
+        if (isFirstPage) state.movies = processed;
+        else {
           const existingIds = new Set(state.movies.map(m => String(m.id)));
-          const uniqueNew = processedNew.filter(m => !existingIds.has(String(m.id)));
-          state.movies = [...state.movies, ...uniqueNew];
+          state.movies = [...state.movies, ...processed.filter(m => !existingIds.has(String(m.id)))];
         }
       })
-      .addCase(getMovies.rejected, (state) => {
-        state.status.movies = "failed";
-      });
+      .addCase(getMovies.rejected, (state) => { state.status.movies = "failed"; });
 
+    // --- TV Shows
     builder
-      .addCase(getTVShows.pending, (state) => {
-        state.status.tvShows = "loading";
-      })
+      .addCase(getTVShows.pending, (state) => { state.status.tvShows = "loading"; })
       .addCase(getTVShows.fulfilled, (state, action: PayloadAction<{ results: Media[]; page: number }>) => {
         state.status.tvShows = "succeeded";
         const isFirstPage = action.payload.page === 1;
+        const processed = mergeApiWithUserData(action.payload.results, state, 'tv', isFirstPage);
 
-        const processedNew = mergeApiWithUserData(
-          action.payload.results, 
-          state, 
-          'tv', 
-          isFirstPage 
-        );
-
-        if (isFirstPage) {
-          state.tvShows = processedNew;
-        } else {
+        if (isFirstPage) state.tvShows = processed;
+        else {
           const existingIds = new Set(state.tvShows.map(m => String(m.id)));
-          const uniqueNew = processedNew.filter(m => !existingIds.has(String(m.id)));
-          state.tvShows = [...state.tvShows, ...uniqueNew];
+          state.tvShows = [...state.tvShows, ...processed.filter(m => !existingIds.has(String(m.id)))];
         }
-      }) 
-      .addCase(getTVShows.rejected, (state) => {
-        state.status.tvShows = "failed";
-      });
-
-    builder
-      .addCase(searchMediaThunk.pending, (state) => {
-        state.status.searchResults = "loading";
       })
+      .addCase(getTVShows.rejected, (state) => { state.status.tvShows = "failed"; });
+
+    // --- Search
+    builder
+      .addCase(searchMediaThunk.pending, (state) => { state.status.searchResults = "loading"; })
       .addCase(searchMediaThunk.fulfilled, (state, action: PayloadAction<Media[]>) => {
         state.status.searchResults = "succeeded";
         state.searchResults = action.payload;
       })
-      .addCase(searchMediaThunk.rejected, (state) => {
-        state.status.searchResults = "failed"; 
-      });
+      .addCase(searchMediaThunk.rejected, (state) => { state.status.searchResults = "failed"; });
   },
 });
 
-export const { addMedia, editMedia, deleteMedia } = mediaSlice.actions;
+// REMEMBER to export the new clearSearchResults action here
+export const { addMedia, editMedia, deleteMedia, clearSearchResults } = mediaSlice.actions;
 export default mediaSlice.reducer;
