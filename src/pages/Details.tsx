@@ -35,8 +35,21 @@ const Details = () => {
     movies.find((m) => String(m.id) === id) ||
     tvShows.find((m) => String(m.id) === id);
 
-  // CRITICAL FIX: tmdbMedia MUST come first so the fetched cast data isn't ignored!
-  const media: Media | null = tmdbMedia ?? reduxMedia ?? null;
+  // --- CRITICAL FIX: MERGING REDUX AND TMDB DATA ---
+  const media: Media | null = useMemo(() => {
+    if (reduxMedia && tmdbMedia) {
+      // Merge them! Redux overwrites base fields (for edits), but we keep TMDB's credits/genres
+      return {
+        ...tmdbMedia,
+        ...reduxMedia,
+        credits: reduxMedia.credits || tmdbMedia.credits,
+        genres: reduxMedia.genres || tmdbMedia.genres,
+      };
+    }
+    // Fallback if only one exists
+    return reduxMedia ?? tmdbMedia ?? null;
+  }, [reduxMedia, tmdbMedia]);
+  // -------------------------------------------------
 
   const isFavorited = useMemo(() => {
     return favorites.some((item) => String(item.id) === String(id));
@@ -265,11 +278,9 @@ const Details = () => {
               )}
             </div>
             
-            {/* --- NEW CAST SECTION START --- */}
             {media.credits?.cast && media.credits.cast.length > 0 && (
               <div className="mt-16 pt-8 border-t border-gray-800 w-full">
                 <h3 className="text-2xl font-bold text-white mb-6">Top Cast</h3>
-                {/* Changed to a wrapping Grid for the "down down" format */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                   {media.credits.cast.slice(0, 10).map((actor) => (
                     <div 
@@ -302,7 +313,6 @@ const Details = () => {
                 </div>
               </div>
             )}
-            {/* --- NEW CAST SECTION END --- */}
 
           </div>
         </div>
