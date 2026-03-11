@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react'; // Added useMemo
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { tmdbApi } from '../api/tmdb';
 import { deleteMedia } from '../features/media/mediaSlice';
-import { toggleFavorite } from '../features/favorites/favoritesSlice'; // 1. Import toggle action
+import { toggleFavorite } from '../features/favorites/favoritesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
@@ -24,7 +24,6 @@ const Details = () => {
   const tvShows = useSelector((state: RootState) => state.media.tvShows);
   const customMovies = useSelector((state: RootState) => state.media.customMovies);
   
-  // 2. Select favorites from store
   const favorites = useSelector((state: RootState) => state.favorites.items);
 
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
@@ -36,20 +35,21 @@ const Details = () => {
     movies.find((m) => String(m.id) === id) ||
     tvShows.find((m) => String(m.id) === id);
 
-  const media: Media | null = reduxMedia ?? tmdbMedia ?? null;
+  // CRITICAL FIX: tmdbMedia MUST come first so the fetched cast data isn't ignored!
+  const media: Media | null = tmdbMedia ?? reduxMedia ?? null;
 
-  // 3. Check if current media is favorited
   const isFavorited = useMemo(() => {
     return favorites.some((item) => String(item.id) === String(id));
   }, [favorites, id]);
 
   useEffect(() => {
     if (!id || !type) return;
-    const hasFullData = reduxMedia?.genres?.length;
+    const hasFullData = reduxMedia?.genres?.length && reduxMedia?.credits; 
+    
     if (!id.startsWith('custom-') && !hasFullData) {
       let canceled = false;
       tmdbApi
-        .get<Media>(`/${type}/${id}`)
+        .get<Media>(`/${type}/${id}?append_to_response=credits`)
         .then((res) => {
           if (!canceled) setTmdbMedia(res.data);
         })
@@ -99,7 +99,6 @@ const Details = () => {
     }
   };
 
-  // 4. Handle Favorite Toggle
   const handleFavoriteToggle = () => {
     dispatch(toggleFavorite(media));
   };
@@ -129,8 +128,6 @@ const Details = () => {
             />
             
             <div className="w-full mt-6 flex justify-center items-center gap-6">
-              
-              {/* 5. Updated Toggle Favorite Button */}
               <button
                 onClick={handleFavoriteToggle}
                 className={`transition-all duration-300 hover:scale-110 active:scale-90 focus:outline-none p-3 rounded-full ${
@@ -140,7 +137,7 @@ const Details = () => {
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
-                  fill={isFavorited ? "currentColor" : "none"} // Filled when favorited
+                  fill={isFavorited ? "currentColor" : "none"}
                   viewBox="0 0 24 24" 
                   strokeWidth="1.5" 
                   stroke="currentColor" 
@@ -267,6 +264,46 @@ const Details = () => {
                 </div>
               )}
             </div>
+            
+            {/* --- NEW CAST SECTION START --- */}
+            {media.credits?.cast && media.credits.cast.length > 0 && (
+              <div className="mt-16 pt-8 border-t border-gray-800 w-full">
+                <h3 className="text-2xl font-bold text-white mb-6">Top Cast</h3>
+                {/* Changed to a wrapping Grid for the "down down" format */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                  {media.credits.cast.slice(0, 10).map((actor) => (
+                    <div 
+                      key={actor.id} 
+                      className="bg-[#111] rounded-xl overflow-hidden shadow-lg shadow-black border border-gray-800 flex flex-col"
+                    >
+                      {actor.profile_path ? (
+                        <img 
+                          src={`https://image.tmdb.org/t/p/w276_and_h350_face${actor.profile_path}`} 
+                          alt={actor.name} 
+                          className="w-full h-48 md:h-56 object-cover bg-gray-900"
+                        />
+                      ) : (
+                        <div className="w-full h-48 md:h-56 bg-gray-900 flex items-center justify-center text-gray-700">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12">
+                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="p-3 flex-1 flex flex-col justify-center">
+                        <p className="text-white font-semibold text-sm truncate" title={actor.name}>
+                          {actor.name}
+                        </p>
+                        <p className="text-gray-400 text-xs truncate mt-1" title={actor.character}>
+                          {actor.character}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* --- NEW CAST SECTION END --- */}
+
           </div>
         </div>
       </div>

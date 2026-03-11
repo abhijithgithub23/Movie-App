@@ -1,5 +1,5 @@
 export type Media = {
-   id: number | string;
+  id: number | string;
   media_type?: 'movie' | 'tv';
   title?: string;
   name?: string;
@@ -24,6 +24,15 @@ export type Media = {
   budget?: number;
   revenue?: number;
   vote_count?: number;
+
+  credits?: {
+    cast: {
+      id: number;
+      name: string;
+      character: string;
+      profile_path: string | null;
+    }[];
+  };
 
 };
 
