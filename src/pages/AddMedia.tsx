@@ -6,174 +6,438 @@ import type { Media } from '../types';
 
 type FormData = {
   title: string;
+  tagline: string;
   overview: string;
   poster_path: string;
+  backdrop_path: string;
   media_type: 'movie' | 'tv';
   release_date: string;
+  runtime: string;
+  vote_average: string;
+  original_language: string;
   genres: string[];
 };
 
 const GENRE_OPTIONS = [
-  'Action',
-  'Adventure',
-  'Comedy',
-  'Drama',
-  'Fantasy',
-  'Horror',
-  'Romance',
-  'Sci-Fi',
-  'Thriller',
-  'Animation',
-  'Documentary',
+  'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 
+  'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Animation', 
+  'Documentary', 'Crime', 'Mystery', 'Family'
 ];
 
 const AddMedia = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  
   const [formData, setFormData] = useState<FormData>({
     title: '',
+    tagline: '',
     overview: '',
     poster_path: '',
+    backdrop_path: '',
     media_type: 'movie',
     release_date: '',
+    runtime: '',
+    vote_average: '',
+    original_language: 'en',
     genres: [],
   });
+
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+
+  // URL Validation Regex
+  const isValidUrl = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch { // <-- FIX 1: Removed the '_' from the catch block
+      return false;
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.overview.trim()) newErrors.overview = 'Overview is required';
+    if (formData.overview.trim().length < 10) newErrors.overview = 'Overview must be at least 10 characters long';
+    
+    if (!formData.poster_path.trim()) {
+      newErrors.poster_path = 'Poster Image URL is required';
+    } else if (!isValidUrl(formData.poster_path)) {
+      newErrors.poster_path = 'Must be a valid URL (e.g., https://...)';
+    }
+
+    if (formData.backdrop_path && !isValidUrl(formData.backdrop_path)) {
+      newErrors.backdrop_path = 'Must be a valid URL (e.g., https://...)';
+    }
+
+    if (!formData.release_date) newErrors.release_date = 'Release date is required';
+    if (formData.genres.length === 0) newErrors.genres = 'Please select at least one genre';
+
+    if (formData.vote_average) {
+      const vote = parseFloat(formData.vote_average);
+      if (isNaN(vote) || vote < 0 || vote > 10) {
+        newErrors.vote_average = 'Rating must be a number between 0 and 10';
+      }
+    }
+
+    if (formData.runtime) {
+      const time = parseInt(formData.runtime, 10);
+      if (isNaN(time) || time <= 0) {
+        newErrors.runtime = 'Runtime must be a valid positive number in minutes';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // TMDB uses 'title' for movies and 'name' for TV shows. 
-    // We map the form's title input to both to ensure your UI displays it correctly either way.
-    const newMedia = {
-      ...formData,
+    if (!validateForm()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const newMedia: Partial<Media> = {
+      title: formData.media_type === 'movie' ? formData.title : undefined,
       name: formData.media_type === 'tv' ? formData.title : undefined,
-      genres: formData.genres.map((name, index) => ({ id: index + 1, name })),
-    } as unknown as Media;
+      // <-- FIX 2: Removed 'original_title' because it's not in your Media type
+      tagline: formData.tagline,
+      overview: formData.overview,
+      poster_path: formData.poster_path,
+      backdrop_path: formData.backdrop_path,
+      media_type: formData.media_type,
+      release_date: formData.media_type === 'movie' ? formData.release_date : undefined,
+      first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
+      runtime: formData.runtime ? parseInt(formData.runtime, 10) : undefined,
+      vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
+      vote_count: 0,
+      original_language: formData.original_language,
+      genres: formData.genres.map((name, index) => ({ id: Date.now() + index, name })),
+      genre_ids: formData.genres.map((_, index) => Date.now() + index),
+    };
 
-    // Dispatch directly as the Media object to match PayloadAction<Media> in your slice
-    dispatch(addMedia(newMedia));
-
+    dispatch(addMedia(newMedia as Media));
     navigate('/');
   };
 
-  // Toggle genre in the array
   const toggleGenre = (genre: string) => {
     setFormData((prev) => {
       const genres = prev.genres.includes(genre)
         ? prev.genres.filter((g) => g !== genre)
         : [...prev.genres, genre];
+      
+      if (genres.length > 0) setErrors((errs) => ({ ...errs, genres: undefined }));
+      
       return { ...prev, genres };
     });
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name as keyof FormData]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
   return (
-    <div className="max-w-2xl mx-auto bg-gray-800 p-8 rounded-lg shadow-lg mt-10">
-      <h2 className="text-3xl font-bold mb-6 text-indigo-400">Add New Media</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Title */}
-        <label htmlFor="media-title" className="text-white font-semibold">Title or Name</label>
-        <input
-          id="media-title"
-          type="text"
-          placeholder="Title or Name"
-          required
-          className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-        />
+    <div className="min-h-screen bg-black pt-8 pb-20 px-4 md:px-8">
+      <div className="max-w-4xl mx-auto bg-gray-900/50 backdrop-blur-md border border-gray-800 p-8 md:p-12 rounded-2xl shadow-2xl">
+        <h1 className="text-4xl font-extrabold mb-8 text-white drop-shadow-md">
+          Add Custom <span className="text-red-600">Media</span>
+        </h1>
+        
+        <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          
+          {/* SECTION 1: Basic Information */}
+          <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
+            <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Basic Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-gray-400 font-medium mb-2">Title / Name <span className="text-red-500">*</span></label>
+                <input
+                  name="title"
+                  type="text"
+                  placeholder="e.g. The Matrix"
+                  className={`w-full p-3 bg-gray-900 border ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-red-600'} text-white rounded-lg focus:outline-none focus:ring-1 transition-colors`}
+                  value={formData.title}
+                  onChange={handleInputChange}
+                />
+                {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+              </div>
 
-        {/* Overview */}
-        <label htmlFor="media-overview" className="text-white font-semibold">Overview / Description</label>
-        <textarea
-          id="media-overview"
-          placeholder="Overview / Description"
-          required
-          rows={4}
-          className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          value={formData.overview}
-          onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
-        />
+              <div>
+                <label className="block text-gray-400 font-medium mb-2">Tagline</label>
+                <input
+                  name="tagline"
+                  type="text"
+                  placeholder="e.g. Welcome to the Real World"
+                  className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600 transition-colors"
+                  value={formData.tagline}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
 
-        {/* Poster */}
-        <label htmlFor="media-poster" className="text-white font-semibold">Poster Image URL</label>
-        <input
-          id="media-poster"
-          type="text"
-          placeholder="https://example.com/poster.jpg"
-          required
-          className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          value={formData.poster_path}
-          onChange={(e) => setFormData({ ...formData, poster_path: e.target.value })}
-        />
-
-        {/* Poster Preview */}
-        {formData.poster_path && (
-          <div className="mt-2">
-            <img
-              src={formData.poster_path}
-              alt="Poster Preview"
-              className="w-48 h-auto rounded shadow-lg border border-gray-600"
-              onError={(e) => ((e.target as HTMLImageElement).src = '')} // hides if invalid URL
-            />
+            <div>
+              <label className="block text-gray-400 font-medium mb-2">Overview / Description <span className="text-red-500">*</span></label>
+              <textarea
+                name="overview"
+                placeholder="Write a brief synopsis of the movie or show..."
+                rows={4}
+                className={`w-full p-3 bg-gray-900 border ${errors.overview ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-red-600'} text-white rounded-lg focus:outline-none focus:ring-1 transition-colors`}
+                value={formData.overview}
+                onChange={handleInputChange}
+              />
+              {errors.overview && <p className="text-red-500 text-sm mt-1">{errors.overview}</p>}
+            </div>
           </div>
-        )}
 
-        {/* Media Type */}
-        <label htmlFor="media-type" className="text-white font-semibold">Media Type</label>
-        <select
-          id="media-type"
-          className="p-3 bg-gray-700 text-white rounded focus:outline-none"
-          value={formData.media_type}
-          onChange={(e) =>
-            setFormData({ ...formData, media_type: e.target.value as 'movie' | 'tv' })
-          }
-        >
-          <option value="movie">Movie</option>
-          <option value="tv">TV Show</option>
-        </select>
+          {/* SECTION 2: Media Details */}
+          <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
+             <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Media Details</h3>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               <div>
+                  <label className="block text-gray-400 font-medium mb-2">Type <span className="text-red-500">*</span></label>
+                  <select
+                    name="media_type"
+                    className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600"
+                    value={formData.media_type}
+                    onChange={handleInputChange}
+                  >
+                    <option value="movie">Movie</option>
+                    <option value="tv">TV Show</option>
+                  </select>
+               </div>
 
-        {/* Release Date */}
-        <label htmlFor="media-date" className="text-white font-semibold">Release Date</label>
-        <input
-          id="media-date"
-          type="date"
-          className="p-3 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          value={formData.release_date}
-          onChange={(e) => setFormData({ ...formData, release_date: e.target.value })}
-        />
+               <div>
+                  <label className="block text-gray-400 font-medium mb-2">{formData.media_type === 'tv' ? 'First Air Date' : 'Release Date'} <span className="text-red-500">*</span></label>
+                  <input
+                    name="release_date"
+                    type="date"
+                    className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                    value={formData.release_date}
+                    onChange={handleInputChange}
+                  />
+                  {errors.release_date && <p className="text-red-500 text-sm mt-1">{errors.release_date}</p>}
+               </div>
 
-        {/* Genres as toggle buttons */}
-        <label className="text-white font-semibold">Genres</label>
-        <div className="flex flex-wrap gap-2">
-          {GENRE_OPTIONS.map((genre) => {
-            const isSelected = formData.genres.includes(genre);
-            return (
-              <button
-                type="button"
-                key={genre}
-                onClick={() => toggleGenre(genre)}
-                className={`px-3 py-1 rounded-full border transition ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-gray-700 text-white border-gray-500 hover:bg-gray-600'
-                }`}
-              >
-                {genre}
-              </button>
-            );
-          })}
-        </div>
+               <div>
+                  <label className="block text-gray-400 font-medium mb-2">Rating (0-10)</label>
+                  <input
+                    name="vote_average"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="10"
+                    placeholder="e.g. 8.5"
+                    className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                    value={formData.vote_average}
+                    onChange={handleInputChange}
+                  />
+                  {errors.vote_average && <p className="text-red-500 text-sm mt-1">{errors.vote_average}</p>}
+               </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          className="bg-indigo-600 py-3 rounded font-bold hover:bg-indigo-700 transition mt-4"
-        >
-          Save Media
-        </button>
-      </form>
+               <div>
+                  <label className="block text-gray-400 font-medium mb-2">Runtime (mins)</label>
+                  <input
+                    name="runtime"
+                    type="number"
+                    placeholder="e.g. 120"
+                    className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                    value={formData.runtime}
+                    onChange={handleInputChange}
+                  />
+                  {errors.runtime && <p className="text-red-500 text-sm mt-1">{errors.runtime}</p>}
+               </div>
+             </div>
+
+             <div>
+                <label className="block text-gray-400 font-medium mb-3">Genres <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-3">
+                  {GENRE_OPTIONS.map((genre) => {
+                    const isSelected = formData.genres.includes(genre);
+                    return (
+                      <button
+                        type="button"
+                        key={genre}
+                        onClick={() => toggleGenre(genre)}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                          isSelected
+                            ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30 scale-105'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white'
+                        }`}
+                      >
+                        {genre}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.genres && <p className="text-red-500 text-sm mt-2">{errors.genres}</p>}
+             </div>
+          </div>
+
+          {/* SECTION 3: Images */}
+          <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
+             <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Media Assets</h3>
+             
+             <div>
+                <label className="block text-gray-400 font-medium mb-2">Poster Image URL <span className="text-red-500">*</span></label>
+                <input
+                  name="poster_path"
+                  type="text"
+                  placeholder="https://example.com/poster.jpg"
+                  className={`w-full p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600 mb-4`}
+                  value={formData.poster_path}
+                  onChange={handleInputChange}
+                />
+                {errors.poster_path && <p className="text-red-500 text-sm mt-1 mb-4">{errors.poster_path}</p>}
+                
+                {formData.poster_path && isValidUrl(formData.poster_path) && (
+                  <div className="relative w-32 rounded-lg overflow-hidden border border-gray-700 shadow-xl">
+                    <img src={formData.poster_path} alt="Poster Preview" className="w-full h-auto object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+                  </div>
+                )}
+             </div>
+
+             <div className="pt-4">
+                <label className="block text-gray-400 font-medium mb-2">Background Cover URL (Optional)</label>
+                <input
+                  name="backdrop_path"
+                  type="text"
+                  placeholder="https://example.com/cover.jpg"
+                  className={`w-full p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                  value={formData.backdrop_path}
+                  onChange={handleInputChange}
+                />
+                {errors.backdrop_path && <p className="text-red-500 text-sm mt-1">{errors.backdrop_path}</p>}
+             </div>
+          </div>
+
+          {/* Submit Action */}
+          <div className="flex justify-end pt-4 border-t border-gray-800 mt-4">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="px-8 py-4 rounded-xl font-bold text-gray-400 hover:text-white mr-4 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="bg-red-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-red-500 shadow-lg shadow-red-600/30 hover:shadow-red-500/50 transition-all duration-300 transform hover:-translate-y-1"
+            >
+              Save Media Database
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   );
 };
 
 export default AddMedia;
+
+
+
+
+// {
+//   "adult": false,
+//   "backdrop_path": "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
+//   "belongs_to_collection": null,
+//   "budget": 63000000,
+//   "genres": [
+//     {
+//       "id": 18,
+//       "name": "Drama"
+//     },
+//     {
+//       "id": 53,
+//       "name": "Thriller"
+//     },
+//     {
+//       "id": 35,
+//       "name": "Comedy"
+//     }
+//   ],
+//   "homepage": "http://www.foxmovies.com/movies/fight-club",
+//   "id": 550,
+//   "imdb_id": "tt0137523",
+//   "original_language": "en",
+//   "original_title": "Fight Club",
+//   "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy. Their concept catches on, with underground \"fight clubs\" forming in every town, until an eccentric gets in the way and ignites an out-of-control spiral toward oblivion.",
+//   "popularity": 61.416,
+//   "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+//   "production_companies": [
+//     {
+//       "id": 508,
+//       "logo_path": "/7cxRWzi4LsVm4Utfpr1hfARNurT.png",
+//       "name": "Regency Enterprises",
+//       "origin_country": "US"
+//     },
+//     {
+//       "id": 711,
+//       "logo_path": "/tEiIH5QesdheJmDAqQwvtN60727.png",
+//       "name": "Fox 2000 Pictures",
+//       "origin_country": "US"
+//     },
+//     {
+//       "id": 20555,
+//       "logo_path": "/hD8yEGUBlHOcfHYbujp71vD8gZp.png",
+//       "name": "Taurus Film",
+//       "origin_country": "DE"
+//     },
+//     {
+//       "id": 54051,
+//       "logo_path": null,
+//       "name": "Atman Entertainment",
+//       "origin_country": ""
+//     },
+//     {
+//       "id": 54052,
+//       "logo_path": null,
+//       "name": "Knickerbocker Films",
+//       "origin_country": "US"
+//     },
+//     {
+//       "id": 4700,
+//       "logo_path": "/A32wmjrs9Psf4zw0uaixF0GXfxq.png",
+//       "name": "The Linson Company",
+//       "origin_country": "US"
+//     },
+//     {
+//       "id": 25,
+//       "logo_path": "/qZCc1lty5FzX30aOCVRBLzaVmcp.png",
+//       "name": "20th Century Fox",
+//       "origin_country": "US"
+//     }
+//   ],
+//   "production_countries": [
+//     {
+//       "iso_3166_1": "US",
+//       "name": "United States of America"
+//     }
+//   ],
+//   "release_date": "1999-10-15",
+//   "revenue": 100853753,
+//   "runtime": 139,
+//   "spoken_languages": [
+//     {
+//       "english_name": "English",
+//       "iso_639_1": "en",
+//       "name": "English"
+//     }
+//   ],
+//   "status": "Released",
+//   "tagline": "Mischief. Mayhem. Soap.",
+//   "title": "Fight Club",
+//   "video": false,
+//   "vote_average": 8.433,
+//   "vote_count": 26280
+// }
