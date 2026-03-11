@@ -224,8 +224,7 @@ const Navbar = () => {
 
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card-bg border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
+          <div className="bg-[#0a0a0a] border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
               <LogOut size={32} className="text-red-500" />
             </div>
             <h3 className="text-2xl font-bold text-text-main mb-2">
