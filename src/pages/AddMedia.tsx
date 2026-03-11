@@ -49,7 +49,7 @@ const AddMedia = () => {
     try {
       new URL(url);
       return true;
-    } catch { // <-- FIX 1: Removed the '_' from the catch block
+    } catch { 
       return false;
     }
   };
@@ -103,7 +103,6 @@ const AddMedia = () => {
     const newMedia: Partial<Media> = {
       title: formData.media_type === 'movie' ? formData.title : undefined,
       name: formData.media_type === 'tv' ? formData.title : undefined,
-      // <-- FIX 2: Removed 'original_title' because it's not in your Media type
       tagline: formData.tagline,
       overview: formData.overview,
       poster_path: formData.poster_path,
@@ -147,7 +146,7 @@ const AddMedia = () => {
     <div className="min-h-screen bg-black pt-8 pb-20 px-4 md:px-8">
       <div className="max-w-4xl mx-auto bg-gray-900/50 backdrop-blur-md border border-gray-800 p-8 md:p-12 rounded-2xl shadow-2xl">
         <h1 className="text-4xl font-extrabold mb-8 text-white drop-shadow-md">
-          Add Custom <span className="text-red-600">Media</span>
+          Add Custom <span className="text-green-500">Media</span>
         </h1>
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
@@ -158,12 +157,12 @@ const AddMedia = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-gray-400 font-medium mb-2">Title / Name <span className="text-red-500">*</span></label>
+                <label className="block text-gray-400 font-medium mb-2">Title / Name <span className="text-green-500">*</span></label>
                 <input
                   name="title"
                   type="text"
                   placeholder="e.g. The Matrix"
-                  className={`w-full p-3 bg-gray-900 border ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-red-600'} text-white rounded-lg focus:outline-none focus:ring-1 transition-colors`}
+                  className={`w-full p-3 bg-gray-900 border ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1 transition-colors`}
                   value={formData.title}
                   onChange={handleInputChange}
                 />
@@ -176,7 +175,7 @@ const AddMedia = () => {
                   name="tagline"
                   type="text"
                   placeholder="e.g. Welcome to the Real World"
-                  className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600 transition-colors"
+                  className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors"
                   value={formData.tagline}
                   onChange={handleInputChange}
                 />
@@ -184,12 +183,12 @@ const AddMedia = () => {
             </div>
 
             <div>
-              <label className="block text-gray-400 font-medium mb-2">Overview / Description <span className="text-red-500">*</span></label>
+              <label className="block text-gray-400 font-medium mb-2">Overview / Description <span className="text-green-500">*</span></label>
               <textarea
                 name="overview"
                 placeholder="Write a brief synopsis of the movie or show..."
                 rows={4}
-                className={`w-full p-3 bg-gray-900 border ${errors.overview ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-red-600'} text-white rounded-lg focus:outline-none focus:ring-1 transition-colors`}
+                className={`w-full p-3 bg-gray-900 border ${errors.overview ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1 transition-colors`}
                 value={formData.overview}
                 onChange={handleInputChange}
               />
@@ -203,10 +202,10 @@ const AddMedia = () => {
              
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                <div>
-                  <label className="block text-gray-400 font-medium mb-2">Type <span className="text-red-500">*</span></label>
+                  <label className="block text-gray-400 font-medium mb-2">Type <span className="text-green-500">*</span></label>
                   <select
                     name="media_type"
-                    className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600"
+                    className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500"
                     value={formData.media_type}
                     onChange={handleInputChange}
                   >
@@ -216,11 +215,11 @@ const AddMedia = () => {
                </div>
 
                <div>
-                  <label className="block text-gray-400 font-medium mb-2">{formData.media_type === 'tv' ? 'First Air Date' : 'Release Date'} <span className="text-red-500">*</span></label>
+                  <label className="block text-gray-400 font-medium mb-2">{formData.media_type === 'tv' ? 'First Air Date' : 'Release Date'} <span className="text-green-500">*</span></label>
                   <input
                     name="release_date"
                     type="date"
-                    className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                    className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1`}
                     value={formData.release_date}
                     onChange={handleInputChange}
                   />
@@ -236,7 +235,7 @@ const AddMedia = () => {
                     min="0"
                     max="10"
                     placeholder="e.g. 8.5"
-                    className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                    className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1`}
                     value={formData.vote_average}
                     onChange={handleInputChange}
                   />
@@ -249,7 +248,7 @@ const AddMedia = () => {
                     name="runtime"
                     type="number"
                     placeholder="e.g. 120"
-                    className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                    className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1`}
                     value={formData.runtime}
                     onChange={handleInputChange}
                   />
@@ -258,7 +257,7 @@ const AddMedia = () => {
              </div>
 
              <div>
-                <label className="block text-gray-400 font-medium mb-3">Genres <span className="text-red-500">*</span></label>
+                <label className="block text-gray-400 font-medium mb-3">Genres <span className="text-green-500">*</span></label>
                 <div className="flex flex-wrap gap-3">
                   {GENRE_OPTIONS.map((genre) => {
                     const isSelected = formData.genres.includes(genre);
@@ -269,7 +268,7 @@ const AddMedia = () => {
                         onClick={() => toggleGenre(genre)}
                         className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${
                           isSelected
-                            ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-600/30 scale-105'
+                            ? 'bg-green-600 text-white border-green-500 shadow-lg shadow-green-600/30 scale-105'
                             : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white'
                         }`}
                       >
@@ -287,12 +286,12 @@ const AddMedia = () => {
              <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Media Assets</h3>
              
              <div>
-                <label className="block text-gray-400 font-medium mb-2">Poster Image URL <span className="text-red-500">*</span></label>
+                <label className="block text-gray-400 font-medium mb-2">Poster Image URL <span className="text-green-500">*</span></label>
                 <input
                   name="poster_path"
                   type="text"
                   placeholder="https://example.com/poster.jpg"
-                  className={`w-full p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600 mb-4`}
+                  className={`w-full p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1 mb-4`}
                   value={formData.poster_path}
                   onChange={handleInputChange}
                 />
@@ -311,7 +310,7 @@ const AddMedia = () => {
                   name="backdrop_path"
                   type="text"
                   placeholder="https://example.com/cover.jpg"
-                  className={`w-full p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-red-600`}
+                  className={`w-full p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500'} text-white rounded-lg focus:outline-none focus:ring-1`}
                   value={formData.backdrop_path}
                   onChange={handleInputChange}
                 />
@@ -330,7 +329,7 @@ const AddMedia = () => {
             </button>
             <button
               type="submit"
-              className="bg-red-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-red-500 shadow-lg shadow-red-600/30 hover:shadow-red-500/50 transition-all duration-300 transform hover:-translate-y-1"
+              className="bg-green-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-green-500 shadow-lg shadow-green-600/30 hover:shadow-green-500/50 transition-all duration-300 transform hover:-translate-y-1"
             >
               Save Media Database
             </button>
@@ -343,101 +342,3 @@ const AddMedia = () => {
 };
 
 export default AddMedia;
-
-
-
-
-// {
-//   "adult": false,
-//   "backdrop_path": "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
-//   "belongs_to_collection": null,
-//   "budget": 63000000,
-//   "genres": [
-//     {
-//       "id": 18,
-//       "name": "Drama"
-//     },
-//     {
-//       "id": 53,
-//       "name": "Thriller"
-//     },
-//     {
-//       "id": 35,
-//       "name": "Comedy"
-//     }
-//   ],
-//   "homepage": "http://www.foxmovies.com/movies/fight-club",
-//   "id": 550,
-//   "imdb_id": "tt0137523",
-//   "original_language": "en",
-//   "original_title": "Fight Club",
-//   "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy. Their concept catches on, with underground \"fight clubs\" forming in every town, until an eccentric gets in the way and ignites an out-of-control spiral toward oblivion.",
-//   "popularity": 61.416,
-//   "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
-//   "production_companies": [
-//     {
-//       "id": 508,
-//       "logo_path": "/7cxRWzi4LsVm4Utfpr1hfARNurT.png",
-//       "name": "Regency Enterprises",
-//       "origin_country": "US"
-//     },
-//     {
-//       "id": 711,
-//       "logo_path": "/tEiIH5QesdheJmDAqQwvtN60727.png",
-//       "name": "Fox 2000 Pictures",
-//       "origin_country": "US"
-//     },
-//     {
-//       "id": 20555,
-//       "logo_path": "/hD8yEGUBlHOcfHYbujp71vD8gZp.png",
-//       "name": "Taurus Film",
-//       "origin_country": "DE"
-//     },
-//     {
-//       "id": 54051,
-//       "logo_path": null,
-//       "name": "Atman Entertainment",
-//       "origin_country": ""
-//     },
-//     {
-//       "id": 54052,
-//       "logo_path": null,
-//       "name": "Knickerbocker Films",
-//       "origin_country": "US"
-//     },
-//     {
-//       "id": 4700,
-//       "logo_path": "/A32wmjrs9Psf4zw0uaixF0GXfxq.png",
-//       "name": "The Linson Company",
-//       "origin_country": "US"
-//     },
-//     {
-//       "id": 25,
-//       "logo_path": "/qZCc1lty5FzX30aOCVRBLzaVmcp.png",
-//       "name": "20th Century Fox",
-//       "origin_country": "US"
-//     }
-//   ],
-//   "production_countries": [
-//     {
-//       "iso_3166_1": "US",
-//       "name": "United States of America"
-//     }
-//   ],
-//   "release_date": "1999-10-15",
-//   "revenue": 100853753,
-//   "runtime": 139,
-//   "spoken_languages": [
-//     {
-//       "english_name": "English",
-//       "iso_639_1": "en",
-//       "name": "English"
-//     }
-//   ],
-//   "status": "Released",
-//   "tagline": "Mischief. Mayhem. Soap.",
-//   "title": "Fight Club",
-//   "video": false,
-//   "vote_average": 8.433,
-//   "vote_count": 26280
-// }

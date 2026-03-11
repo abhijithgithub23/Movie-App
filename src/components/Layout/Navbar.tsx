@@ -82,7 +82,7 @@ const Navbar = () => {
                 title={t("addMedia")}
                 className={({ isActive }) =>
                   `transition-colors ${
-                    isActive ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"
+                    isActive ? "text-green-400" : "text-gray-400 hover:text-green-400"
                   }`
                 }
               >
