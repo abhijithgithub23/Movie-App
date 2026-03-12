@@ -1,5 +1,5 @@
 // src/pages/Search/SearchForm.tsx
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useCallback } from 'react';
 
 interface SearchFormProps {
   initialQuery: string;
@@ -11,20 +11,24 @@ const SearchForm = memo(({ initialQuery, onSearchSubmit, onClear }: SearchFormPr
   const inputRef = useRef<HTMLInputElement>(null);
   const clearBtnRef = useRef<HTMLButtonElement>(null);
 
-  const handleNativeInput = () => {
-    if (!clearBtnRef.current || !inputRef.current) return;
-    if (inputRef.current.value.length > 0) {
-      clearBtnRef.current.style.opacity = '1';
-      clearBtnRef.current.style.pointerEvents = 'auto';
-    } else {
-      clearBtnRef.current.style.opacity = '0';
-      clearBtnRef.current.style.pointerEvents = 'none';
-    }
-  };
+const handleNativeInput = useCallback(() => {
+  if (!clearBtnRef.current || !inputRef.current) return;
 
-  useEffect(() => {
-    handleNativeInput();
-  }, []);
+  const value = inputRef.current.value;
+
+  if (value.length > 0) {
+    clearBtnRef.current.style.opacity = '1';
+    clearBtnRef.current.style.pointerEvents = 'auto';
+  } else {
+    clearBtnRef.current.style.opacity = '0';
+    clearBtnRef.current.style.pointerEvents = 'none';
+    onClear();
+  }
+}, [onClear]);
+
+ useEffect(() => {
+  handleNativeInput();
+}, [handleNativeInput]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
