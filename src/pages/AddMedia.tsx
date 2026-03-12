@@ -129,9 +129,13 @@ const AddMedia = () => {
         duration: 2000, // Explicitly set duration
       });
       
-      // Add a slight delay before navigating to ensure the toast is seen
+      // 1. DYNAMIC NAVIGATION LOGIC
       setTimeout(() => {
-        navigate('/');
+        if (formData.media_type === 'movie') {
+          navigate('/movies');
+        } else {
+          navigate('/tv');
+        }
       }, 1000); // 1-second delay
       
     } catch (error) {
@@ -166,8 +170,6 @@ const AddMedia = () => {
         <h1 className="text-4xl font-extrabold mb-8 text-white drop-shadow-md">
           Add Custom <span className="text-green-500">Media</span>
         </h1>
-
-       
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
           
@@ -342,7 +344,7 @@ const AddMedia = () => {
           <div className="flex justify-end pt-4 border-t border-gray-800 mt-4">
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(-1)} 
               className="px-8 py-4 rounded-xl font-bold text-gray-400 hover:text-white mr-4 transition-colors"
             >
               Cancel

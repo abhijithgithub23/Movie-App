@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { editMedia } from '../features/media/mediaSlice';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { tmdbApi } from '../api/tmdb';
-import toast from 'react-hot-toast'; // 1. IMPORT TOAST
+import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 
@@ -30,6 +30,7 @@ const STANDARD_GENRES = [
 const EditMedia = () => {
   const { id, type } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
   const trending = useSelector((state: RootState) => state.media.trending);
@@ -59,33 +60,9 @@ const EditMedia = () => {
   useEffect(() => {
     if (!id || !type) return;
 
-    const fetchMedia = async () => {
-      let found: Media | undefined =
-        customMovies.find((m) => String(m.id) === id) ||
-        trending.find((m) => String(m.id) === id) ||
-        movies.find((m) => String(m.id) === id) ||
-        tvShows.find((m) => String(m.id) === id);
+    const populateForm = (finalMedia: Media) => {
+      setMedia(finalMedia);
 
-      if (!found && !id.startsWith('custom-')) {
-        try {
-          const res = await tmdbApi.get<Media>(`/${type}/${id}`);
-          found = res.data;
-        } catch (err) {
-          console.error('Failed to fetch media', err);
-          navigate('/');
-          return;
-        }
-      }
-
-      if (!found) {
-        console.error('Media not found');
-        navigate('/');
-        return;
-      }
-
-      setMedia(found);
-
-      // Convert TMDB relative image paths to full URLs for the form validation
       const getFullUrl = (path: string | undefined, size: 'w500' | 'original') => {
         if (!path) return '';
         if (path.startsWith('http')) return path;
@@ -93,24 +70,73 @@ const EditMedia = () => {
       };
 
       setFormData({
-        title: found.title || found.name || '',
-        tagline: found.tagline || '',
-        overview: found.overview || '',
-        poster_path: getFullUrl(found.poster_path, 'w500'),
-        backdrop_path: getFullUrl(found.backdrop_path, 'original'),
-        media_type: found.media_type || (type as 'movie' | 'tv'),
-        release_date: found.release_date || found.first_air_date || '',
-        runtime: found.runtime ? found.runtime.toString() : '',
-        vote_average: found.vote_average ? found.vote_average.toString() : '',
-        original_language: found.original_language || 'en',
-        genres: found.genres ? found.genres.map((g) => g.name) : [],
+        title: finalMedia.title || finalMedia.name || '',
+        tagline: finalMedia.tagline || '',
+        overview: finalMedia.overview || '',
+        poster_path: getFullUrl(finalMedia.poster_path, 'w500'),
+        backdrop_path: getFullUrl(finalMedia.backdrop_path, 'original'),
+        media_type: finalMedia.media_type || (type as 'movie' | 'tv'),
+        release_date: finalMedia.release_date || finalMedia.first_air_date || '',
+        runtime: finalMedia.runtime ? finalMedia.runtime.toString() : '',
+        vote_average: finalMedia.vote_average ? finalMedia.vote_average.toString() : '',
+        original_language: finalMedia.original_language || 'en',
+        genres: finalMedia.genres ? finalMedia.genres.map((g) => g.name) : [],
       });
       
       setIsLoading(false);
     };
 
+    // CHECK FOR PASSED DATA FIRST TO AVOID API CALL
+    const passedMedia = location.state?.fullMedia;
+    
+    if (passedMedia) {
+      populateForm(passedMedia);
+      return; 
+    }
+
+    // FALLBACK IF PAGE WAS REFRESHED MANUALLY
+    const fetchMedia = async () => {
+      const foundRedux: Media | undefined =
+        customMovies.find((m) => String(m.id) === id) ||
+        trending.find((m) => String(m.id) === id) ||
+        movies.find((m) => String(m.id) === id) ||
+        tvShows.find((m) => String(m.id) === id);
+
+      let finalMedia: Media | null = foundRedux || null;
+
+      if (!id.startsWith('custom-')) {
+        try {
+          const res = await tmdbApi.get<Media>(`/${type}/${id}`);
+          if (foundRedux) {
+            finalMedia = {
+              ...res.data,
+              ...foundRedux,
+              genres: foundRedux.genres?.length ? foundRedux.genres : res.data.genres,
+              runtime: foundRedux.runtime || res.data.runtime,
+            };
+          } else {
+            finalMedia = res.data;
+          }
+        } catch (err) {
+          console.error('Failed to fetch media from TMDB', err);
+          if (!finalMedia) {
+            navigate('/');
+            return;
+          }
+        }
+      }
+
+      if (!finalMedia) {
+        console.error('Media not found');
+        navigate('/');
+        return;
+      }
+
+      populateForm(finalMedia);
+    };
+
     fetchMedia();
-  }, [id, type, trending, movies, tvShows, customMovies, navigate]);
+  }, [id, type, trending, movies, tvShows, customMovies, navigate, location.state]);
 
   const isValidUrl = (url: string) => {
     try {
@@ -159,19 +185,18 @@ const EditMedia = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // 2. UPDATE THE SUBMIT HANDLER
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!media || !id) return;
 
     if (!validateForm()) {
-      toast.error('Please fix the errors in the form.'); // Trigger error toast
+      toast.error('Please fix the errors in the form.'); 
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     const updatedMedia: Media = {
-      ...media, // Preserve ID and other original properties
+      ...media, 
       title: formData.media_type === 'movie' ? formData.title : undefined,
       name: formData.media_type === 'tv' ? formData.title : undefined,
       tagline: formData.tagline,
@@ -185,7 +210,6 @@ const EditMedia = () => {
       vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
       original_language: formData.original_language,
       genres: formData.genres.map((name, index) => {
-        // Try to keep original genre ID if it exists, otherwise generate a new one
         const existing = media.genres?.find(g => g.name === name);
         return existing ? existing : { id: Date.now() + index, name };
       }),
@@ -194,13 +218,12 @@ const EditMedia = () => {
     try {
       dispatch(editMedia(updatedMedia));
       
-      // 3. ADD SUCCESS TOAST AND SETTIMEOUT FOR NAVIGATION
       toast.success(`"${formData.title}" updated successfully!`, {
         duration: 2000
       });
 
       setTimeout(() => {
-        navigate(`/details/${type}/${media.id}`);
+        navigate(`/details/${formData.media_type}/${media.id}`);
       }, 1000);
 
     } catch (error) {
@@ -228,7 +251,6 @@ const EditMedia = () => {
     }
   };
 
-  // Combine standard genres with any unique genres this specific media might have
   const ALL_GENRES = Array.from(new Set([...STANDARD_GENRES, ...formData.genres]));
 
   if (!id || !type) return <div className="text-white flex justify-center items-center h-screen">Invalid URL</div>;
@@ -327,10 +349,10 @@ const EditMedia = () => {
                   <input
                     name="vote_average"
                     type="number"
-                    step="0.1"
+                    step="0.0001"
                     min="0"
                     max="10"
-                    placeholder="e.g. 8.5"
+                    placeholder="e.g. 8.5234"
                     className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
                     value={formData.vote_average}
                     onChange={handleInputChange}

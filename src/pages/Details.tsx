@@ -5,7 +5,7 @@ import { tmdbApi } from '../api/tmdb';
 import { deleteMedia } from '../features/media/mediaSlice';
 import { toggleFavorite } from '../features/favorites/favoritesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
-import toast from 'react-hot-toast'; // 1. IMPORT TOAST HERE
+import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 
@@ -36,10 +36,8 @@ const Details = () => {
     movies.find((m) => String(m.id) === id) ||
     tvShows.find((m) => String(m.id) === id);
 
-  // --- CRITICAL FIX: MERGING REDUX AND TMDB DATA ---
   const media: Media | null = useMemo(() => {
     if (reduxMedia && tmdbMedia) {
-      // Merge them! Redux overwrites base fields (for edits), but we keep TMDB's credits/genres
       return {
         ...tmdbMedia,
         ...reduxMedia,
@@ -47,10 +45,8 @@ const Details = () => {
         genres: reduxMedia.genres || tmdbMedia.genres,
       };
     }
-    // Fallback if only one exists
     return reduxMedia ?? tmdbMedia ?? null;
   }, [reduxMedia, tmdbMedia]);
-  // -------------------------------------------------
 
   const isFavorited = useMemo(() => {
     return favorites.some((item) => String(item.id) === String(id));
@@ -105,19 +101,16 @@ const Details = () => {
     return `${h > 0 ? h + 'h ' : ''}${m}m`;
   };
 
-  // 2. UPDATE YOUR confirmDelete LOGIC
   const confirmDelete = () => {
     if (media.id) {
       try {
         dispatch(deleteMedia(media.id));
         setShowDeleteModal(false);
         
-        // Trigger the success toast
         toast.success(`"${media.title || media.name}" was deleted successfully!`, {
           duration: 2000
         });
 
-        // Add a small delay before navigating back to home
         setTimeout(() => {
           navigate('/');
         }, 1000);
@@ -131,12 +124,6 @@ const Details = () => {
 
   const handleFavoriteToggle = () => {
     dispatch(toggleFavorite(media));
-    // Optional: You can also add a toast here for favorites!
-    // if (isFavorited) {
-    //   toast('Removed from favorites', { icon: '💔' });
-    // } else {
-    //   toast.success('Added to favorites!');
-    // }
   };
 
   return (
@@ -186,7 +173,8 @@ const Details = () => {
               {isAdmin && (
                 <div className="flex justify-center items-center gap-4 border-l pl-6 border-gray-800">
                   <button
-                    onClick={() => navigate(`/admin/edit/${type}/${media.id}`)}
+                    // PASSING THE STATE HERE SO EDIT PAGE DOESN'T NEED TO FETCH IT AGAIN
+                    onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })}
                     className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300"
                     title="Edit Media"
                   >
