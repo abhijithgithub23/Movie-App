@@ -63,7 +63,7 @@ export const getTVShows = createAsyncThunk<{ results: Media[]; page: number }, n
   async (pageArg) => {
     const page = typeof pageArg === "number" ? pageArg : 1;
     const res = await tmdbApi.get("/discover/tv", { params: { page } });
-    return { results: res.data.results, page };
+    return { results: res.data.results, page };     
   }
 );
 
