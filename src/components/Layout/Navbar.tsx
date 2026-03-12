@@ -1,13 +1,87 @@
 import { NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 
 // IMPORT Theme TYPE ALONG WITH useTheme
-import { useTheme,type Theme } from "../../context/ThemeContext"; 
+import { useTheme, type Theme } from "../../context/ThemeContext"; 
 
-import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv } from "lucide-react";
+import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, ChevronDown } from "lucide-react";
+
+// --- CUSTOM GLASSY DROPDOWN COMPONENT ---
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
+interface GlassyDropdownProps {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  isMobile?: boolean;
+}
+
+const GlassyDropdown = ({ value, options, onChange, isMobile = false }: GlassyDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedLabel = options.find((opt) => opt.value === value)?.label || options[0].label;
+
+  return (
+    <div className={`relative ${isMobile ? "flex-1" : ""}`} ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between gap-3 bg-text-main/5 backdrop-blur-md border border-text-main/10 shadow-sm text-text-main text-sm rounded-xl outline-none hover:bg-text-main/10 focus:ring-2 focus:ring-text-main/20 transition-all duration-300 ${
+          isMobile ? "px-3 py-3" : "px-3 py-1.5"
+        }`}
+      >
+        <span className="truncate">{selectedLabel}</span>
+        <ChevronDown 
+          size={16} 
+          className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} 
+        />
+      </button>
+
+      {isOpen && (
+        <div 
+          className={`absolute left-0 mt-2 min-w-[140px] w-full bg-nav/70 backdrop-blur-xl border border-text-main/10 rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 ${
+            isMobile ? "bottom-full mb-2 mt-0" : "top-full"
+          }`}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                value === opt.value
+                  ? "bg-text-main/15 text-text-main font-semibold"
+                  : "text-text-muted hover:bg-text-main/10 hover:text-text-main"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+// --- END CUSTOM COMPONENT ---
+
 
 const Navbar = () => {
   const { t } = useTranslation();
@@ -23,6 +97,30 @@ const Navbar = () => {
     `text-lg font-medium transition flex items-center gap-2 ${
       isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
     }`;
+
+  // Options arrays for the custom dropdowns
+  const themeOptions = [
+    { value: "dark", label: "Dark" },
+    { value: "light", label: "Light" },
+    { value: "midnight", label: "Midnight" },
+    { value: "dracula", label: "Dracula" },
+    { value: "forest", label: "Forest" },
+    { value: "solarized", label: "Solarized" },
+  ];
+
+  const languageOptionsDesktop = [
+    { value: "en", label: "EN" },
+    { value: "hi", label: "HI" },
+    { value: "ml", label: "ML" },
+    { value: "es", label: "ES" },
+  ];
+
+  const languageOptionsMobile = [
+    { value: "en", label: "English" },
+    { value: "hi", label: "Hindi" },
+    { value: "ml", label: "Malayalam" },
+    { value: "es", label: "Español" },
+  ];
 
   return (
     <>
@@ -88,30 +186,19 @@ const Navbar = () => {
                 </NavLink>
               )}
 
-              {/* FIX: Cast target value to 'Theme' type */}
-              <select
-                onChange={(e) => setTheme(e.target.value as Theme)}
+              {/* CUSTOM GLASSY THEME DROPDOWN */}
+              <GlassyDropdown 
                 value={theme}
-                className="bg-nav border border-text-muted/30 text-text-main text-sm px-2 py-1 rounded outline-none focus:border-text-muted transition-colors"
-              >
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-                <option value="midnight">Midnight</option>
-                <option value="dracula">Dracula</option>
-                <option value="forest">Forest</option>
-                <option value="solarized">Solarized</option>
-              </select>
+                options={themeOptions}
+                onChange={(val) => setTheme(val as Theme)}
+              />
 
-              <select
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
+              {/* CUSTOM GLASSY LANGUAGE DROPDOWN */}
+              <GlassyDropdown 
                 value={i18n.language}
-                className="bg-nav border border-text-muted/30 text-text-main text-sm px-2 py-1 rounded outline-none focus:border-text-muted transition-colors"
-              >
-                <option value="en">EN</option>
-                <option value="hi">HI</option>
-                <option value="ml">ML</option>
-                <option value="es">ES</option>
-              </select>
+                options={languageOptionsDesktop}
+                onChange={(val) => i18n.changeLanguage(val)}
+              />
 
               {isAuthenticated ? (
                 <button
@@ -176,27 +263,21 @@ const Navbar = () => {
             </div>
 
             <div className="flex gap-4">
-              {/* FIX: Cast target value to 'Theme' type */}
-              <select
-                onChange={(e) => setTheme(e.target.value as Theme)}
+              {/* CUSTOM GLASSY THEME DROPDOWN (MOBILE) */}
+              <GlassyDropdown 
                 value={theme}
-                className="flex-1 bg-nav border border-text-muted/30 text-text-main text-sm px-2 py-3 rounded outline-none"
-              >
-                <option value="dark">Dark Theme</option>
-                <option value="light">Light Theme</option>
-                <option value="midnight">Midnight Theme</option>
-              </select>
+                options={themeOptions.map(opt => ({ ...opt, label: `${opt.label} Theme` }))}
+                onChange={(val) => setTheme(val as Theme)}
+                isMobile={true}
+              />
 
-              <select
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
+              {/* CUSTOM GLASSY LANGUAGE DROPDOWN (MOBILE) */}
+              <GlassyDropdown 
                 value={i18n.language}
-                className="flex-1 bg-nav border border-text-muted/30 text-text-main text-sm px-2 py-3 rounded outline-none"
-              >
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="ml">Malayalam</option>
-                <option value="es">Español</option>
-              </select>
+                options={languageOptionsMobile}
+                onChange={(val) => i18n.changeLanguage(val)}
+                isMobile={true}
+              />
             </div>
 
             {isAuthenticated ? (
@@ -224,7 +305,8 @@ const Navbar = () => {
 
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-[#0a0a0a] border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
+          <div className="bg-[#0a0a0a] border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
               <LogOut size={32} className="text-red-500" />
             </div>
             <h3 className="text-2xl font-bold text-text-main mb-2">
