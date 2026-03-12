@@ -20,27 +20,33 @@ const Details = () => {
   const id = paramId || '';
   const type = paramType || '';
 
+  // Redux State Selectors
   const trending = useSelector((state: RootState) => state.media.trending);
   const movies = useSelector((state: RootState) => state.media.movies);
   const tvShows = useSelector((state: RootState) => state.media.tvShows);
   const customMovies = useSelector((state: RootState) => state.media.customMovies);
-  
+  const editedMedia = useSelector((state: RootState) => state.media.edited); // <-- Added Edited Media
   const favorites = useSelector((state: RootState) => state.favorites.items);
 
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const reduxMedia: Media | undefined = 
-    customMovies.find((m) => String(m.id) === id) ||
-    trending.find((m) => String(m.id) === id) ||
-    movies.find((m) => String(m.id) === id) ||
-    tvShows.find((m) => String(m.id) === id);
+  // Find the media in Redux, prioritizing edits and favorites first
+  const reduxMedia: Media | undefined = useMemo(() => {
+    return editedMedia.find((m) => String(m.id) === id) ||
+           customMovies.find((m) => String(m.id) === id) ||
+           favorites.find((m) => String(m.id) === id) ||
+           trending.find((m) => String(m.id) === id) ||
+           movies.find((m) => String(m.id) === id) ||
+           tvShows.find((m) => String(m.id) === id);
+  }, [id, editedMedia, customMovies, favorites, trending, movies, tvShows]);
 
+  // Merge TMDB data and Local data (Local data ALWAYS wins)
   const media: Media | null = useMemo(() => {
     if (reduxMedia && tmdbMedia) {
       return {
         ...tmdbMedia,
-        ...reduxMedia,
+        ...reduxMedia, // Local edits overwrite TMDB data here
         credits: reduxMedia.credits || tmdbMedia.credits,
         genres: reduxMedia.genres || tmdbMedia.genres,
       };
@@ -52,21 +58,35 @@ const Details = () => {
     return favorites.some((item) => String(item.id) === String(id));
   }, [favorites, id]);
 
+  // API Gatekeeper Logic
+  const isCustom = String(id).startsWith('custom-');
+  const hasFullData = Boolean(reduxMedia?.genres?.length && reduxMedia?.credits);
+  const hasLocalData = Boolean(reduxMedia);
+
   useEffect(() => {
     if (!id || !type) return;
-    const hasFullData = reduxMedia?.genres?.length && reduxMedia?.credits; 
     
-    if (!id.startsWith('custom-') && !hasFullData) {
-      let canceled = false;
-      tmdbApi
-        .get<Media>(`/${type}/${id}?append_to_response=credits`)
-        .then((res) => {
-          if (!canceled) setTmdbMedia(res.data);
-        })
-        .catch(() => navigate('/'));
-      return () => { canceled = true; };
+    // 1. Skip TMDB fetch entirely if it's a custom item OR if we already have the complete details cached
+    if (isCustom || hasFullData) {
+      return;
     }
-  }, [id, type, reduxMedia, navigate]);
+
+    // 2. Otherwise, fetch missing details (like cast & crew) from TMDB
+    let canceled = false;
+    tmdbApi
+      .get<Media>(`/${type}/${id}?append_to_response=credits`)
+      .then((res) => {
+        if (!canceled) setTmdbMedia(res.data);
+      })
+      .catch(() => {
+        // 3. Only navigate away if TMDB fails AND we have absolutely no local data to show
+        if (!canceled && !hasLocalData) {
+          navigate('/');
+        }
+      });
+
+    return () => { canceled = true; };
+  }, [id, type, isCustom, hasFullData, hasLocalData, navigate]);
 
   if (!media) {
     return (
@@ -173,7 +193,6 @@ const Details = () => {
               {isAdmin && (
                 <div className="flex justify-center items-center gap-4 border-l pl-6 border-gray-800">
                   <button
-                    // PASSING THE STATE HERE SO EDIT PAGE DOESN'T NEED TO FETCH IT AGAIN
                     onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })}
                     className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300"
                     title="Edit Media"
