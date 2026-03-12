@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect , memo} from "react";
 import { useNavigate } from "react-router-dom";
 
 export interface HeroMediaItem {
@@ -125,4 +125,16 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
   );
 };
 
-export default HeroCarousel;
+// This tells React exactly WHEN it is allowed to re-render the HeroCarousel
+export default memo(HeroCarousel, (prevProps, nextProps) => {
+  // If the media type changes, allow re-render
+  if (prevProps.mediaType !== nextProps.mediaType) return false;
+  
+  // Create simple arrays of just the IDs
+  const prevIds = prevProps.items.map(item => item.id).join(',');
+  const nextIds = nextProps.items.map(item => item.id).join(',');
+  
+  // If the string of IDs is identical, return TRUE (meaning: "Do NOT re-render")
+  // If the IDs are different, return FALSE (meaning: "Go ahead and re-render")
+  return prevIds === nextIds;
+});

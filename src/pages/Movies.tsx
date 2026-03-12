@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react"; // Added useCallback
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { getMovies } from "../features/media/mediaSlice";
@@ -23,6 +23,8 @@ interface MovieData {
 const Movies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
+
+  // console.log("🎬 Parent MOVIES page rendered!"); 
 
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
@@ -61,7 +63,8 @@ const Movies = () => {
     }
   }, [dispatch, i18n.language, rawMovies.length]);
 
-  const handleLoadMore = async () => {
+  // Memoize the function so it doesn't break MediaRow's memoization
+  const handleLoadMore = useCallback(async () => {
     if (status !== "loading" && !isFetchingMore) {
       setIsFetchingMore(true);
       const nextPage = page + 1;
@@ -69,7 +72,7 @@ const Movies = () => {
       await dispatch(getMovies(nextPage));
       setIsFetchingMore(false);
     }
-  };
+  }, [status, isFetchingMore, page, dispatch]);
 
   if (status === "loading" && page === 1) {
     return <LoadingSpinner />;

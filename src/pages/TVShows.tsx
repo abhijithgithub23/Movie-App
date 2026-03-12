@@ -11,6 +11,9 @@ const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
 
+    // console.log("🎬 Parent TV page rendered!"); 
+
+
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
 

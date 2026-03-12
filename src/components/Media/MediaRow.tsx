@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Media } from "../../types";
 
@@ -9,6 +9,9 @@ interface MediaRowProps {
 }
 
 const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
+
+  // console.log(`🍿 Sibling MediaRow rendered: ${title}`); 
+
   const rowRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -116,4 +119,4 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
   );
 };
 
-export default MediaRow;
+export default memo(MediaRow);
