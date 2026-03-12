@@ -1,13 +1,41 @@
+import { memo, useState, useRef, useEffect, useCallback } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
-
-// IMPORT Theme TYPE ALONG WITH useTheme
+import LogoutModal from "../ui/LogoutModal";
 import { useTheme, type Theme } from "../../context/ThemeContext"; 
-
 import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, ChevronDown } from "lucide-react";
+
+// 1. STATIC DATA MOVED OUTSIDE: 
+// These arrays will now only be created ONCE when the file loads, saving memory and preserving references.
+const themeOptions = [
+  { value: "dark", label: "Dark" },
+  { value: "midnight", label: "Midnight" },
+  { value: "dracula", label: "Dracula" },
+  { value: "forest", label: "Forest" },
+  { value: "solarized", label: "Solarized" },
+];
+
+const languageOptionsDesktop = [
+  { value: "en", label: "EN" },
+  { value: "hi", label: "HI" },
+  { value: "ml", label: "ML" },
+  { value: "es", label: "ES" },
+];
+
+const languageOptionsMobile = [
+  { value: "en", label: "English" },
+  { value: "hi", label: "Hindi" },
+  { value: "ml", label: "Malayalam" },
+  { value: "es", label: "Español" },
+];
+
+// Reusable static function moved outside
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  `text-lg font-medium transition flex items-center gap-2 ${
+    isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
+  }`;
 
 // --- CUSTOM GLASSY DROPDOWN COMPONENT ---
 interface DropdownOption {
@@ -22,7 +50,9 @@ interface GlassyDropdownProps {
   isMobile?: boolean;
 }
 
-const GlassyDropdown = ({ value, options, onChange, isMobile = false }: GlassyDropdownProps) => {
+// 2. WRAPPED IN MEMO: 
+// This dropdown will now ONLY re-render if its specific value changes.
+const GlassyDropdown = memo(({ value, options, onChange, isMobile = false }: GlassyDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -79,13 +109,13 @@ const GlassyDropdown = ({ value, options, onChange, isMobile = false }: GlassyDr
       )}
     </div>
   );
-};
+});
 // --- END CUSTOM COMPONENT ---
 
 
 const Navbar = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
+  const { isAuthenticated, loginWithRedirect, user } = useAuth0();
   const { theme, setTheme } = useTheme();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -93,33 +123,15 @@ const Navbar = () => {
   
   const isAdmin = user?.email === "abhijithksd23@gmail.com";
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `text-lg font-medium transition flex items-center gap-2 ${
-      isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
-    }`;
+  // 3. MEMOIZED HANDLERS:
+  // These prevent the GlassyDropdown from thinking it received a "new" function prop
+  const handleThemeChange = useCallback((val: string) => {
+    setTheme(val as Theme);
+  }, [setTheme]);
 
-  // Options arrays for the custom dropdowns
-  const themeOptions = [
-    { value: "dark", label: "Dark" },
-    { value: "midnight", label: "Midnight" },
-    { value: "dracula", label: "Dracula" },
-    { value: "forest", label: "Forest" },
-    { value: "solarized", label: "Solarized" },
-  ];
-
-  const languageOptionsDesktop = [
-    { value: "en", label: "EN" },
-    { value: "hi", label: "HI" },
-    { value: "ml", label: "ML" },
-    { value: "es", label: "ES" },
-  ];
-
-  const languageOptionsMobile = [
-    { value: "en", label: "English" },
-    { value: "hi", label: "Hindi" },
-    { value: "ml", label: "Malayalam" },
-    { value: "es", label: "Español" },
-  ];
+  const handleLanguageChange = useCallback((val: string) => {
+    i18n.changeLanguage(val);
+  }, []);
 
   return (
     <>
@@ -185,18 +197,16 @@ const Navbar = () => {
                 </NavLink>
               )}
 
-              {/* CUSTOM GLASSY THEME DROPDOWN */}
               <GlassyDropdown 
                 value={theme}
                 options={themeOptions}
-                onChange={(val) => setTheme(val as Theme)}
+                onChange={handleThemeChange}
               />
 
-              {/* CUSTOM GLASSY LANGUAGE DROPDOWN */}
               <GlassyDropdown 
                 value={i18n.language}
                 options={languageOptionsDesktop}
-                onChange={(val) => i18n.changeLanguage(val)}
+                onChange={handleLanguageChange}
               />
 
               {isAuthenticated ? (
@@ -262,19 +272,17 @@ const Navbar = () => {
             </div>
 
             <div className="flex gap-4">
-              {/* CUSTOM GLASSY THEME DROPDOWN (MOBILE) */}
               <GlassyDropdown 
                 value={theme}
-                options={themeOptions.map(opt => ({ ...opt, label: `${opt.label} Theme` }))}
-                onChange={(val) => setTheme(val as Theme)}
+                options={themeOptions}
+                onChange={handleThemeChange}
                 isMobile={true}
               />
 
-              {/* CUSTOM GLASSY LANGUAGE DROPDOWN (MOBILE) */}
               <GlassyDropdown 
                 value={i18n.language}
                 options={languageOptionsMobile}
-                onChange={(val) => i18n.changeLanguage(val)}
+                onChange={handleLanguageChange}
                 isMobile={true}
               />
             </div>
@@ -302,35 +310,10 @@ const Navbar = () => {
         )}
       </nav>
 
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-[#0a0a0a] border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
-              <LogOut size={32} className="text-red-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-text-main mb-2">
-              Ready to leave?
-            </h3>
-            <p className="text-text-muted mb-8 text-sm">
-              Are you sure you want to log out of your Cinevia account?
-            </p>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-3 px-4 bg-text-muted/20 hover:bg-text-muted/30 text-text-main rounded-xl font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition-colors shadow-lg shadow-red-600/20"
-              >
-                Log Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LogoutModal 
+        isOpen={showLogoutConfirm} 
+        onClose={() => setShowLogoutConfirm(false)} 
+      />
     </>
   );
 };
