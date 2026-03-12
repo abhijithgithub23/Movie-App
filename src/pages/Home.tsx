@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next"; 
@@ -20,10 +20,18 @@ const Home = () => {
   const [textVisible, setTextVisible] = useState(true);
 
   // const { theme } = useTheme();
+  
+  const prevLangRef = useRef(i18n.language);
 
   useEffect(() => {
-    dispatch(getTrending());
-  }, [dispatch, i18n.language]);
+    const isLangChange = prevLangRef.current !== i18n.language;
+    
+    // Only fetch if we have no data OR the language has changed
+    if (trending.length === 0 || isLangChange) {
+      dispatch(getTrending());
+      prevLangRef.current = i18n.language;
+    }
+  }, [dispatch, i18n.language, trending.length]);
  
   useEffect(() => {
     if (!trending.length) return;
@@ -66,7 +74,6 @@ const Home = () => {
   const totalSlides = Math.min(trending.length, 10);
 
   return (
-    // UPDATED: bg-main and text-text-main
     <div className="bg-main text-text-main min-h-screen pt-2 transition-colors duration-300">
       {/* HERO SECTION */}
       <div className="relative h-[75vh] overflow-hidden">
@@ -93,7 +100,7 @@ const Home = () => {
           );
         })}
 
-        {/*  GRADIENT */}
+        {/* GRADIENT */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10" />
 
         {/* HERO TEXT CONTAINER */}
@@ -102,7 +109,6 @@ const Home = () => {
             textVisible ? "opacity-100 duration-1000" : "opacity-0 duration-500"
           }`}
         >
-          {/* UPDATED TEXT COLOR */}
           <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg text-white">
             {textHero.title || textHero.name}
           </h1>
@@ -112,7 +118,6 @@ const Home = () => {
           </p>
 
           <div className="flex gap-4">
-            {/* UPDATED BUTTON */}
             <button 
               onClick={handleHeroClick}
               className="flex items-center gap-2 bg-btn-bg/90 text-btn-text font-medium px-6 py-2 rounded-md shadow-sm hover:bg-btn-bg transition-colors duration-300"

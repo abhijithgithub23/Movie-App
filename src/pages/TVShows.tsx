@@ -1,39 +1,40 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getTVShows } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
-// import { useTheme } from "../context/ThemeContext"; // <-- IMPORT THEME CONTEXT
+// import { useTheme } from "../context/ThemeContext";
 
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { i18n } = useTranslation();
-  // const { theme } = useTheme(); // <-- USE THEME
+  // const { theme } = useTheme();
 
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
 
-  // State to track pagination and language changes
-  const [page, setPage] = useState(1);
+  // Initialize page dynamically based on cached items
+  const [page, setPage] = useState(() => Math.max(1, Math.ceil(rawShows.length / 20)));
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  
+  // 1. Render-phase state update
   const [prevLanguage, setPrevLanguage] = useState(i18n.language);
-
-  // Render-phase state update to reset page on language change safely
   if (i18n.language !== prevLanguage) {
     setPrevLanguage(i18n.language);
     setPage(1);
   }
 
-  // useMemo prevents unnecessary re-renders and casts media_type correctly for TypeScript
+  // 2. Ref to track the last fetched language for the API call
+  const fetchedLangRef = useRef(i18n.language);
+
   const shows = useMemo(
     () => rawShows.map((s) => ({ ...s, media_type: "tv" as const })),
     [rawShows]
   );
 
-  // Grab the top 10 trending/popular TV shows specifically for the Hero section
   const trendingHeroShows = useMemo(
     () =>
       [...shows]
@@ -46,12 +47,17 @@ const TVShows = () => {
   const totalSlides = trendingHeroShows.length;
 
   useEffect(() => {
-    dispatch(getTVShows(1)); 
-  }, [dispatch, i18n.language]);
+    const isLangChange = fetchedLangRef.current !== i18n.language;
+
+    // 3. ONLY perform side effects here
+    if (rawShows.length === 0 || isLangChange) {
+      dispatch(getTVShows(1));
+      fetchedLangRef.current = i18n.language;
+    }
+  }, [dispatch, i18n.language, rawShows.length]);
 
   // Load more handler for infinity scrolling
   const handleLoadMore = async () => {
-    // Prevent multiple simultaneous fetches
     if (status !== "loading" && !isFetchingMore) {
       setIsFetchingMore(true);
       const nextPage = page + 1;
@@ -61,7 +67,6 @@ const TVShows = () => {
     }
   };
 
-  // Crossfade Interval
   useEffect(() => {
     if (!totalSlides) return;
 
@@ -72,7 +77,6 @@ const TVShows = () => {
     return () => clearInterval(interval);
   }, [totalSlides]);
 
-  // NEW: Display loading spinner on initial fetch or language switch
   if (status === "loading" && page === 1) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] bg-main transition-colors duration-300">
@@ -81,7 +85,6 @@ const TVShows = () => {
     );
   }
 
-  // Fallback if no shows exist after loading finishes
   if (!shows.length || !trendingHeroShows.length) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] bg-main text-text-muted transition-colors duration-300">
@@ -90,13 +93,11 @@ const TVShows = () => {
     );
   }
 
-  // Helper for Hero Navigation
   const handleHeroClick = (id: string | number) => {
     navigate(`/details/tv/${id}`);
   };
 
   return (
-    // UPDATED: bg-main and text-text-main
     <div className="bg-main text-text-main min-h-screen pt-2 transition-colors duration-300">
       {/* CINEMATIC HERO SECTION */}
       <div className="relative h-[80vh] w-full overflow-hidden flex items-center bg-main">
@@ -110,7 +111,6 @@ const TVShows = () => {
                 isActive ? "opacity-100 z-10" : "opacity-0 z-0"
               }`}
             >
-              {/* Blurred Ambient Background */}
               <div
                 className="absolute inset-0 bg-cover bg-center blur-sm scale-110 opacity-70"
                 style={{
@@ -120,42 +120,32 @@ const TVShows = () => {
                 }}
               />
               
-              {/* CONDITIONAL GRADIENTS: Hidden on light theme */}
               <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
              
-
-              {/* Content Split Layout */}
               <div className="relative z-20 w-full px-8 md:px-16 flex flex-col md:flex-row items-center justify-between gap-12">
                 
-                {/* Left Side: Text Content */}
                 <div className="flex-1 max-w-2xl">
-                  {/* UPDATED: Badge colors */}
                   <div className="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-text-main uppercase bg-text-muted/10 border border-text-muted/20 rounded-full backdrop-blur-sm">
                     Top 10 TV Shows • #{i + 1}
                   </div>
                   
-                  {/* UPDATED: Maintained white text for readability against images */}
                   <h1 className="text-4xl md:text-6xl font-extrabold mb-4 leading-tight drop-shadow-2xl text-white">
                     {item.title || item.name}
                   </h1>
                   
-                  {/* UPDATED: text-text-muted */}
                   <div className="flex items-center gap-4 mb-6 text-sm text-text-muted font-medium drop-shadow-md">
                     <span className="flex items-center gap-1 text-yellow-400">
                       ★ {item.vote_average?.toFixed(1) || "N/A"}
                     </span>
                     <span>•</span>
-                    {/* TV shows use first_air_date instead of release_date */}
                     <span>{item.first_air_date?.substring(0, 4) || "N/A"}</span>
                   </div>
 
-                  {/* UPDATED: text-gray-200 for slight contrast boost over images */}
                   <p className="text-gray-200 text-lg mb-8 line-clamp-3 md:line-clamp-4 drop-shadow-lg leading-relaxed font-medium">
                     {item.overview}
                   </p>
 
                   <div className="flex gap-4">
-                    {/* UPDATED: Primary Button */}
                     <button
                       onClick={() => handleHeroClick(item.id)}
                       className="flex items-center gap-2 bg-btn-bg text-btn-text font-semibold px-8 py-3 rounded-full shadow-lg hover:opacity-90 transition-all duration-300 hover:scale-105"
@@ -165,7 +155,6 @@ const TVShows = () => {
                       </svg>
                       Watch Trailer
                     </button>
-                    {/* UPDATED: Secondary Button */}
                     <button
                       onClick={() => handleHeroClick(item.id)}
                       className="bg-card-bg/60 text-text-main font-semibold px-8 py-3 rounded-full hover:bg-card-bg transition-all duration-300 backdrop-blur-md border border-text-muted/30"
@@ -175,9 +164,7 @@ const TVShows = () => {
                   </div>
                 </div>
 
-                {/* Right Side: Featured Poster */}
                 <div className="hidden md:block w-full max-w-sm flex-shrink-0 perspective-1000">
-                  {/* UPDATED: Shadow and border match theme */}
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-main/80 border border-text-muted/20 transform transition-transform duration-700 hover:scale-105 hover:-rotate-2 cursor-pointer"
                        onClick={() => handleHeroClick(item.id)}>
                     <img
@@ -194,7 +181,6 @@ const TVShows = () => {
         })}
       </div>
 
-      {/* CONTENT ROWS */}
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
         <MediaRow 
           title="Discover TV Shows" 

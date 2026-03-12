@@ -131,7 +131,7 @@ const mediaSlice = createSlice({
       state.status.searchResults = "idle";
     },
   },
-
+ 
   extraReducers: (builder) => {
     const mergeApiWithUserData = (
       fetched: Media[], 

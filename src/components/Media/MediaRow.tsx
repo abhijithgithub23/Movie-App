@@ -5,13 +5,19 @@ import type { Media } from "../../types";
 interface MediaRowProps {
   title: string;
   media: Media[];
-  onLoadMore?: () => void; // Added the optional onLoadMore prop
+  onLoadMore?: () => void;
 }
 
 const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
-  const observerTarget = useRef<HTMLDivElement>(null); // Ref for the end-of-list sentinel
+  const observerTarget = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // 1. Keep track of the latest onLoadMore function without triggering effect re-runs
+  const savedOnLoadMore = useRef(onLoadMore);
+  useEffect(() => {
+    savedOnLoadMore.current = onLoadMore;
+  }, [onLoadMore]);
 
   const scroll = (direction: "left" | "right") => {
     if (!rowRef.current) return;
@@ -25,32 +31,31 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
     navigate(`/details/${type}/${item.id}`);
   };
 
-  // Intersection Observer to trigger infinite scrolling
   useEffect(() => {
+    // 2. Safety check: ensure the DOM elements exist before setting up the observer
+    if (!rowRef.current || !observerTarget.current) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        // If the invisible div at the end comes into view, trigger the fetch
-        if (entries[0].isIntersecting && onLoadMore) {
-          onLoadMore();
+        // 3. Call the saved function instead of the dependency
+        if (entries[0].isIntersecting && savedOnLoadMore.current) {
+          savedOnLoadMore.current();
         }
       },
       { 
-        root: rowRef.current, // Observe within the scrollable row container
-        rootMargin: "0px 200px 0px 0px", // Pre-fetch slightly before reaching the absolute end
+        root: rowRef.current, 
+        rootMargin: "0px 200px 0px 0px", 
         threshold: 0 
       } 
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
+    observer.observe(observerTarget.current);
 
     return () => observer.disconnect();
-  }, [onLoadMore]);
+  }, []); // 4. Empty dependency array: the observer is set up exactly once
 
   return (
     <div className="relative">
-      {/* Row title (Trending Now, etc) */}
       <h2 className="text-2xl font-bold mb-4 mt-8">{title}</h2>
 
       <div className="relative group/row">
@@ -103,8 +108,8 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
             </div>
           ))}
           
-          {/* Invisible target element to trigger the Intersection Observer */}
-          <div ref={observerTarget} className="w-10 flex-shrink-0" />
+          {/* Added h-full to ensure the observer has vertical space to intersect with */}
+          <div ref={observerTarget} className="w-10 h-full flex-shrink-0" />
         </div>
       </div>
     </div>

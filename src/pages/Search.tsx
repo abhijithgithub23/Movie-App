@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { searchMediaThunk, clearSearchResults } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
 import { Link } from 'react-router-dom';
-// import { useTheme } from '../context/ThemeContext'; // <-- Import Theme context just in case
+// import { useTheme } from '../context/ThemeContext'; 
 
+// Static configuration arrays
 const LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'hi', name: 'Hindi' },
@@ -16,6 +17,29 @@ const LANGUAGES = [
 
 const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i);
 
+// Hardcoded genres to prevent unnecessary API calls
+const GENRES = [
+  { id: 28, name: "Action" },
+  { id: 12, name: "Adventure" },
+  { id: 16, name: "Animation" },
+  { id: 35, name: "Comedy" },
+  { id: 80, name: "Crime" },
+  { id: 99, name: "Documentary" },
+  { id: 18, name: "Drama" },
+  { id: 10751, name: "Family" },
+  { id: 14, name: "Fantasy" },
+  { id: 36, name: "History" },
+  { id: 27, name: "Horror" },
+  { id: 10402, name: "Music" },
+  { id: 9648, name: "Mystery" },
+  { id: 10749, name: "Romance" },
+  { id: 878, name: "Science Fiction" },
+  { id: 10770, name: "TV Movie" },
+  { id: 53, name: "Thriller" },
+  { id: 10752, name: "War" },
+  { id: 37, name: "Western" }
+];
+
 const Search = () => {
   const dispatch = useDispatch<AppDispatch>();
   // const { theme } = useTheme(); 
@@ -26,7 +50,6 @@ const Search = () => {
   // Search State
   const [query, setQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
-  const [genres, setGenres] = useState<{ id: number; name: string }[]>([]);
 
   // Filter States
   const [selectedMediaType, setSelectedMediaType] = useState<'all' | 'movie' | 'tv'>('all');
@@ -34,16 +57,6 @@ const Search = () => {
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
-
-  // Fetch Genres
-  useState(() => {
-    fetch(
-      `https://api.themoviedb.org/3/genre/movie/list?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-    )
-      .then((res) => res.json())
-      .then((data) => setGenres(data.genres))
-      .catch(console.error);
-  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,13 +110,11 @@ const Search = () => {
   }, [searchResults, selectedMediaType, selectedGenre, selectedRating, selectedYear, selectedLanguage]);
 
   return (
-    // UPDATED: bg-main and text-text-main
     <div className="bg-main text-text-main min-h-screen pt-8 px-6 md:px-12 pb-12 transition-colors duration-300">
       <div className="flex flex-col md:flex-row gap-8 w-full mx-auto">
         
         {/* COMPREHENSIVE LEFT SIDEBAR */}
         <aside className="w-full md:w-72 flex-shrink-0 z-10">
-          {/* UPDATED: bg-card-bg/50 and border-text-muted/20 */}
           <div className="sticky top-24 bg-card-bg/50 backdrop-blur-xl border border-text-muted/20 p-6 rounded-2xl shadow-2xl max-h-[calc(100vh-8rem)] overflow-y-auto hide-scrollbar transition-colors duration-300">            
             
             <div className="flex items-center justify-between mb-6">
@@ -189,7 +200,7 @@ const Search = () => {
             <div>
               <h4 className="text-sm font-semibold text-text-muted mb-3 uppercase tracking-wider">Genres</h4>
               <div className="flex flex-wrap gap-2">
-                {genres.map((g) => (
+                {GENRES.map((g) => (
                   <button
                     key={g.id}
                     onClick={() => setSelectedGenre(selectedGenre === g.id ? null : g.id)}
@@ -217,7 +228,7 @@ const Search = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              {/* UPDATED: Search Input Colors */}
+              
               <input
                 type="text"
                 placeholder="Search for Movies or TV shows....."
@@ -245,7 +256,6 @@ const Search = () => {
                 </button>
               )}
 
-              {/* UPDATED: Search Button */}
               <button
                 type="submit"
                 className="absolute right-3 top-3 bottom-3 bg-btn-bg text-btn-text px-8 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-btn-bg/30"
@@ -305,7 +315,6 @@ const Search = () => {
                         </svg>
                       </div>
                     )}
-                    {/* Gradient blending into main background color */}
                     <div className="absolute inset-0 bg-gradient-to-t from-main via-main/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
 
