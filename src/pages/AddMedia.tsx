@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { addMedia } from '../features/media/mediaSlice';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast'; // Import toast
 import type { Media } from '../types';
 
 type FormData = {
@@ -96,6 +97,8 @@ const AddMedia = () => {
     e.preventDefault();
 
     if (!validateForm()) {
+      // Trigger error toast if validation fails
+      toast.error('Please fix the errors in the form.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -118,8 +121,23 @@ const AddMedia = () => {
       genre_ids: formData.genres.map((_, index) => Date.now() + index),
     };
 
-    dispatch(addMedia(newMedia as Media));
-    navigate('/');
+    try {
+      dispatch(addMedia(newMedia as Media));
+      
+      // Trigger success toast
+      toast.success(`${formData.title} was added successfully!`, {
+        duration: 2000, // Explicitly set duration
+      });
+      
+      // Add a slight delay before navigating to ensure the toast is seen
+      setTimeout(() => {
+        navigate('/');
+      }, 1000); // 1-second delay
+      
+    } catch (error) {
+      console.log('Error adding media:', error);
+      toast.error('Failed to add media. Please try again.');
+    }
   };
 
   const toggleGenre = (genre: string) => {
@@ -148,6 +166,8 @@ const AddMedia = () => {
         <h1 className="text-4xl font-extrabold mb-8 text-white drop-shadow-md">
           Add Custom <span className="text-green-500">Media</span>
         </h1>
+
+       
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
           

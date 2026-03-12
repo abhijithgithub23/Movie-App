@@ -3,6 +3,9 @@ import { AuthGuard } from './auth0/AuthGuard';
 import Navbar from './components/Layout/Navbar';
 import ScrollToTop from './components/Layout/ScrollToTop';
 
+// 1. IMPORT DIRECTLY FROM THE LIBRARY
+import { Toaster } from 'react-hot-toast';
+
 import Home from './pages/Home';
 import Movies from './pages/Movies';
 import TVShows from './pages/TVShows';
@@ -17,8 +20,12 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      {/* UPDATE THIS LINE: using bg-main and text-text-main */}
+      
       <div className="min-h-screen bg-main text-text-main font-sans transition-colors duration-300">
+        
+        {/* 2. ADD IT DIRECTLY HERE WITH A MASSIVE Z-INDEX */}
+        <Toaster containerStyle={{ zIndex: 999999 }} />
+
         <Navbar />
 
         <main className="pt-16">
