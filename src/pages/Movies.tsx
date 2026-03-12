@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -29,19 +29,20 @@ const Movies = () => {
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
 
-  // Initialize page dynamically based on cached items (20 items per TMDB page)
-  const [page, setPage] = useState(() => Math.max(1, Math.ceil(rawMovies.length / 20)));
+  // Safely initialize page based on whether the data matches the current language
+  const [page, setPage] = useState(() => {
+    const lastLang = sessionStorage.getItem('cv_movies_lang');
+    return lastLang === i18n.language ? Math.max(1, Math.ceil(rawMovies.length / 20)) : 1;
+  });
+  
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  // 1. Render-phase state update (Safe from ESLint warnings)
+  // Render-phase state update (handles live language switching while already on the page)
   const [prevLanguage, setPrevLanguage] = useState(i18n.language);
   if (i18n.language !== prevLanguage) {
     setPrevLanguage(i18n.language);
     setPage(1);
   }
-
-  // 2. Ref to track the last fetched language for the API call
-  const fetchedLangRef = useRef(i18n.language);
 
   const movies = useMemo(
     () => rawMovies.map((m: MovieData) => ({ ...m, media_type: "movie" as const })),
@@ -60,16 +61,15 @@ const Movies = () => {
   const totalSlides = trendingHeroMovies.length;
 
   useEffect(() => {
-    const isLangChange = fetchedLangRef.current !== i18n.language;
+    const lastLang = sessionStorage.getItem('cv_movies_lang');
 
-    // 3. ONLY perform side effects here
-    if (rawMovies.length === 0 || isLangChange) {
+    // ONLY perform side effects here
+    if (rawMovies.length === 0 || lastLang !== i18n.language) {
       dispatch(getMovies(1));
-      fetchedLangRef.current = i18n.language;
+      sessionStorage.setItem('cv_movies_lang', i18n.language);
     }
   }, [dispatch, i18n.language, rawMovies.length]);
 
-  // Load more handler for infinity scrolling
   const handleLoadMore = async () => {
     if (status !== "loading" && !isFetchingMore) {
       setIsFetchingMore(true);
@@ -82,11 +82,9 @@ const Movies = () => {
 
   useEffect(() => {
     if (!totalSlides) return;
-
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % totalSlides);
     }, 7000);
-
     return () => clearInterval(interval);
   }, [totalSlides]);
 

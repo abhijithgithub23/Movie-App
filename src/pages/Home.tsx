@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next"; 
@@ -20,16 +20,15 @@ const Home = () => {
   const [textVisible, setTextVisible] = useState(true);
 
   // const { theme } = useTheme();
-  
-  const prevLangRef = useRef(i18n.language);
 
   useEffect(() => {
-    const isLangChange = prevLangRef.current !== i18n.language;
+    // 1. Check session storage instead of a local ref
+    const lastLang = sessionStorage.getItem('cv_trending_lang');
     
-    // Only fetch if we have no data OR the language has changed
-    if (trending.length === 0 || isLangChange) {
+    // 2. Fetch if empty OR if the cached language doesn't match the current UI language
+    if (trending.length === 0 || lastLang !== i18n.language) {
       dispatch(getTrending());
-      prevLangRef.current = i18n.language;
+      sessionStorage.setItem('cv_trending_lang', i18n.language);
     }
   }, [dispatch, i18n.language, trending.length]);
  
@@ -100,10 +99,8 @@ const Home = () => {
           );
         })}
 
-        {/* GRADIENT */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10" />
 
-        {/* HERO TEXT CONTAINER */}
         <div
           className={`absolute bottom-16 left-8 md:left-12 max-w-2xl transition-opacity ease-in-out z-20 ${
             textVisible ? "opacity-100 duration-1000" : "opacity-0 duration-500"
@@ -138,7 +135,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* CONTENT ROWS */}
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-20">
         <MediaRow title="Trending Now" media={trending} />
         <MediaRow title="Popular Movies" media={movies} />
