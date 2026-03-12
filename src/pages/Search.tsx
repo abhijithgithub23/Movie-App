@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { searchMediaThunk, clearSearchResults } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
 import { Link } from 'react-router-dom';
 // import { useTheme } from '../context/ThemeContext'; 
 
-// Static configuration arrays
 const LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'hi', name: 'Hindi' },
@@ -17,7 +16,6 @@ const LANGUAGES = [
 
 const YEARS = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i);
 
-// Hardcoded genres to prevent unnecessary API calls
 const GENRES = [
   { id: 28, name: "Action" },
   { id: 12, name: "Adventure" },
@@ -47,28 +45,56 @@ const Search = () => {
   const searchResults = useSelector((state: RootState) => state.media.searchResults);
   const searchStatus = useSelector((state: RootState) => state.media.status.searchResults);
   
-  // Search State
-  const [query, setQuery] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
+  // 1. Initialize State from Session Storage
+  const [query, setQuery] = useState(() => sessionStorage.getItem('cv_query') || '');
+  const [hasSearched, setHasSearched] = useState(() => sessionStorage.getItem('cv_hasSearched') === 'true');
 
-  // Filter States
-  const [selectedMediaType, setSelectedMediaType] = useState<'all' | 'movie' | 'tv'>('all');
-  const [selectedGenre, setSelectedGenre] = useState<number | null>(null);
-  const [selectedRating, setSelectedRating] = useState<number>(0);
-  const [selectedYear, setSelectedYear] = useState<string>('all');
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
+  const [selectedMediaType, setSelectedMediaType] = useState<'all' | 'movie' | 'tv'>(
+    () => (sessionStorage.getItem('cv_mediaType') as 'all' | 'movie' | 'tv') || 'all'
+  );
+  const [selectedGenre, setSelectedGenre] = useState<number | null>(() => {
+    const saved = sessionStorage.getItem('cv_genre');
+    return saved ? Number(saved) : null;
+  });
+  const [selectedRating, setSelectedRating] = useState<number>(() => Number(sessionStorage.getItem('cv_rating')) || 0);
+  const [selectedYear, setSelectedYear] = useState<string>(() => sessionStorage.getItem('cv_year') || 'all');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(() => sessionStorage.getItem('cv_lang') || 'all');
+
+  // 2. Sync ONLY the Filters to Session Storage automatically
+  useEffect(() => {
+    sessionStorage.setItem('cv_mediaType', selectedMediaType);
+    if (selectedGenre !== null) sessionStorage.setItem('cv_genre', String(selectedGenre));
+    else sessionStorage.removeItem('cv_genre');
+    sessionStorage.setItem('cv_rating', String(selectedRating));
+    sessionStorage.setItem('cv_year', selectedYear);
+    sessionStorage.setItem('cv_lang', selectedLanguage);
+  }, [selectedMediaType, selectedGenre, selectedRating, selectedYear, selectedLanguage]);
+
+  // 3. Safety Check: If page is hard-refreshed, refetch the data
+  useEffect(() => {
+    if (hasSearched && query && searchResults.length === 0 && searchStatus !== 'loading') {
+      dispatch(searchMediaThunk(query));
+    }
+  }, [dispatch, hasSearched, query, searchResults.length, searchStatus]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
     dispatch(searchMediaThunk(query));
     setHasSearched(true);
+    
+    // 4. Save Query to Session Storage ONLY on Submit
+    sessionStorage.setItem('cv_query', query);
+    sessionStorage.setItem('cv_hasSearched', 'true');
   };
 
   const handleClearSearch = () => {
     setQuery('');
     setHasSearched(false);
     dispatch(clearSearchResults());
+    // Clear the cached query items
+    sessionStorage.removeItem('cv_query');
+    sessionStorage.removeItem('cv_hasSearched');
   };
 
   const clearFilters = () => {
@@ -240,6 +266,9 @@ const Search = () => {
                   if (!newQuery.trim()) {
                     setHasSearched(false);
                     dispatch(clearSearchResults());
+                    // Clear storage if they completely erase the input box manually
+                    sessionStorage.removeItem('cv_query');
+                    sessionStorage.removeItem('cv_hasSearched');
                   }
                 }}
               />
