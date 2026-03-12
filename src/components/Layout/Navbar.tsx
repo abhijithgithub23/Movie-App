@@ -101,7 +101,6 @@ const Navbar = () => {
   // Options arrays for the custom dropdowns
   const themeOptions = [
     { value: "dark", label: "Dark" },
-    { value: "light", label: "Light" },
     { value: "midnight", label: "Midnight" },
     { value: "dracula", label: "Dracula" },
     { value: "forest", label: "Forest" },
@@ -127,7 +126,7 @@ const Navbar = () => {
       <nav className="fixed top-0 w-full z-50 bg-nav/80 backdrop-blur-md border-b border-text-muted/10 transition-colors duration-300">
         <div className="w-full flex justify-between items-center px-6 md:px-12 py-4">
           
-          <NavLink to="/" className="text-4xl font-bold text-red-600 tracking-tighter">
+          <NavLink to="/" className="text-4xl font-bold text-red-600 tracking-tighter mr-2">
             CINEVIA
           </NavLink>
 

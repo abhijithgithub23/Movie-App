@@ -8,12 +8,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
+import { useTheme } from '../context/ThemeContext'; // <-- IMPORT THEME CONTEXT
 
 const Details = () => {
   const { id: paramId, type: paramType } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth0();
+  const { theme } = useTheme(); // <-- USE THEME
   
   const isAdmin = user?.email === 'abhijithksd23@gmail.com';
 
@@ -25,7 +27,7 @@ const Details = () => {
   const movies = useSelector((state: RootState) => state.media.movies);
   const tvShows = useSelector((state: RootState) => state.media.tvShows);
   const customMovies = useSelector((state: RootState) => state.media.customMovies);
-  const editedMedia = useSelector((state: RootState) => state.media.edited); // <-- Added Edited Media
+  const editedMedia = useSelector((state: RootState) => state.media.edited);
   const favorites = useSelector((state: RootState) => state.favorites.items);
 
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
@@ -46,7 +48,7 @@ const Details = () => {
     if (reduxMedia && tmdbMedia) {
       return {
         ...tmdbMedia,
-        ...reduxMedia, // Local edits overwrite TMDB data here
+        ...reduxMedia,
         credits: reduxMedia.credits || tmdbMedia.credits,
         genres: reduxMedia.genres || tmdbMedia.genres,
       };
@@ -90,7 +92,8 @@ const Details = () => {
 
   if (!media) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black text-red-500">
+      // UPDATED: bg-main and text-btn-bg
+      <div className="flex justify-center items-center min-h-screen bg-main text-btn-bg transition-colors duration-300">
         <svg className="animate-spin h-10 w-10" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -148,7 +151,8 @@ const Details = () => {
 
   return (
     <>
-      <div className="bg-black min-h-screen text-white pb-20 -mt-20 md:-mt-24">
+      {/* UPDATED: bg-main and text-text-main */}
+      <div className="bg-main min-h-screen text-text-main pb-20 -mt-20 md:-mt-24 transition-colors duration-300">
         <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
           {backdropUrl ? (
             <div 
@@ -156,25 +160,28 @@ const Details = () => {
               style={{ backgroundImage: `url(${backdropUrl})` }}
             />
           ) : (
-            <div className="absolute inset-0 bg-red-950/20" />
+            <div className="absolute inset-0 bg-main/20" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent" />
+          
+          {/* UPDATED: Conditional gradients to hide on light theme */}
+          <div className={`absolute inset-0 transition-colors duration-1000 ${theme === 'light' ? 'bg-transparent' : 'bg-gradient-to-t from-main via-main/60 to-transparent'}`} />
+          <div className={`absolute inset-0 transition-colors duration-1000 ${theme === 'light' ? 'bg-transparent' : 'bg-gradient-to-r from-main/90 via-main/40 to-transparent'}`} />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 -mt-72 md:-mt-96 relative z-10 flex flex-col md:flex-row gap-8 md:gap-16">
           <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 flex flex-col items-center">
+            {/* UPDATED: Shadow matches theme main background */}
             <img
               src={posterUrl}
               alt={media.title || media.name}
-              className="w-64 md:w-full rounded-2xl shadow-2xl shadow-black border border-gray-800 object-cover"
+              className="w-64 md:w-full rounded-2xl shadow-2xl shadow-main/80 border border-text-muted/20 object-cover"
             />
             
             <div className="w-full mt-6 flex justify-center items-center gap-6">
               <button
                 onClick={handleFavoriteToggle}
                 className={`transition-all duration-300 hover:scale-110 active:scale-90 focus:outline-none p-3 rounded-full ${
-                    isFavorited ? 'bg-red-600/10' : 'hover:bg-white/10'
+                    isFavorited ? 'bg-btn-bg/10' : 'hover:bg-text-muted/10'
                 }`}
                 title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
               >
@@ -184,14 +191,15 @@ const Details = () => {
                   viewBox="0 0 24 24" 
                   strokeWidth="1.5" 
                   stroke="currentColor" 
-                  className={`w-10 h-10 transition-colors ${isFavorited ? 'text-red-500' : 'text-white'}`}
+                  // UPDATED: Text color for favorite icon
+                  className={`w-10 h-10 transition-colors ${isFavorited ? 'text-btn-bg' : 'text-text-main'}`}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
                 </svg>
               </button>
 
               {isAdmin && (
-                <div className="flex justify-center items-center gap-4 border-l pl-6 border-gray-800">
+                <div className="flex justify-center items-center gap-4 border-l pl-6 border-text-muted/30">
                   <button
                     onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })}
                     className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300"
@@ -216,12 +224,12 @@ const Details = () => {
           </div>
 
           <div className="flex-1 mt-8 md:mt-16">
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md">
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md text-text-main">
               {media.title || media.name}
             </h1>
             
             {media.tagline && (
-              <p className="text-xl md:text-2xl text-gray-400 italic mb-6 font-light">
+              <p className="text-xl md:text-2xl text-text-muted italic mb-6 font-light">
                 "{media.tagline}"
               </p>
             )}
@@ -235,29 +243,29 @@ const Details = () => {
               )}
               
               {(media.release_date || media.first_air_date) && (
-                <span className="text-gray-300">
+                <span className="text-text-muted">
                   {(media.release_date || media.first_air_date)?.substring(0, 4)}
                 </span>
               )}
               
               {formatRuntime(media.runtime) && (
                 <>
-                  <span className="text-gray-600">•</span>
-                  <span className="text-gray-300">{formatRuntime(media.runtime)}</span>
+                  <span className="text-text-muted/50">•</span>
+                  <span className="text-text-muted">{formatRuntime(media.runtime)}</span>
                 </>
               )}
 
               {media.status && (
                 <>
-                   <span className="text-gray-600">•</span>
-                   <span className="text-gray-300">{media.status}</span>
+                   <span className="text-text-muted/50">•</span>
+                   <span className="text-text-muted">{media.status}</span>
                 </>
               )}
 
               {media.original_language && (
                 <>
-                  <span className="text-gray-600">•</span>
-                  <span className="uppercase text-gray-300 border border-gray-700 px-2 py-0.5 rounded text-xs tracking-widest">
+                  <span className="text-text-muted/50">•</span>
+                  <span className="uppercase text-text-muted border border-text-muted/30 px-2 py-0.5 rounded text-xs tracking-widest">
                     {media.original_language}
                   </span>
                 </>
@@ -267,7 +275,8 @@ const Details = () => {
             {media.genres && media.genres.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-10">
                 {media.genres.map((g) => (
-                  <span key={g.id} className="bg-red-950/40 text-red-200 border border-red-900/50 px-4 py-1.5 rounded-full text-sm font-medium tracking-wide">
+                  // UPDATED: Dynamic genre pills
+                  <span key={g.id} className="bg-btn-bg/10 text-btn-bg border border-btn-bg/30 px-4 py-1.5 rounded-full text-sm font-medium tracking-wide">
                     {g.name}
                   </span>
                 ))}
@@ -275,66 +284,68 @@ const Details = () => {
             )}
 
             <div className="mb-12">
-              <h3 className="text-xl font-bold text-white mb-4">Overview</h3>
-              <p className="text-gray-300 text-lg leading-relaxed max-w-4xl">
+              <h3 className="text-xl font-bold text-text-main mb-4">Overview</h3>
+              <p className="text-text-muted text-lg leading-relaxed max-w-4xl">
                 {media.overview || 'No overview available.'}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-gray-800">
+            {/* UPDATED: border-text-muted/20 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-text-muted/20">
               {(media.budget ?? 0) > 0 && (
                 <div>
-                  <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Budget</h4>
-                  <p className="text-white font-semibold">{formatCurrency(media.budget)}</p>
+                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Budget</h4>
+                  <p className="text-text-main font-semibold">{formatCurrency(media.budget)}</p>
                 </div>
               )}
               {(media.revenue ?? 0) > 0 && (
                 <div>
-                  <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Revenue</h4>
-                  <p className="text-white font-semibold">{formatCurrency(media.revenue)}</p>
+                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Revenue</h4>
+                  <p className="text-text-main font-semibold">{formatCurrency(media.revenue)}</p>
                 </div>
               )}
               {media.origin_country && media.origin_country.length > 0 && (
                 <div>
-                  <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Country</h4>
-                  <p className="text-white font-semibold">{media.origin_country.join(', ')}</p>
+                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Country</h4>
+                  <p className="text-text-main font-semibold">{media.origin_country.join(', ')}</p>
                 </div>
               )}
               {media.popularity && (
                 <div>
-                  <h4 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Popularity Rank</h4>
-                  <p className="text-white font-semibold">{media.popularity.toFixed(0)}</p>
+                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Popularity Rank</h4>
+                  <p className="text-text-main font-semibold">{media.popularity.toFixed(0)}</p>
                 </div>
               )}
             </div>
             
             {media.credits?.cast && media.credits.cast.length > 0 && (
-              <div className="mt-16 pt-8 border-t border-gray-800 w-full">
-                <h3 className="text-2xl font-bold text-white mb-6">Top Cast</h3>
+              <div className="mt-16 pt-8 border-t border-text-muted/20 w-full">
+                <h3 className="text-2xl font-bold text-text-main mb-6">Top Cast</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                   {media.credits.cast.slice(0, 10).map((actor) => (
+                    // UPDATED: bg-card-bg
                     <div 
                       key={actor.id} 
-                      className="bg-[#111] rounded-xl overflow-hidden shadow-lg shadow-black border border-gray-800 flex flex-col"
+                      className="bg-card-bg rounded-xl overflow-hidden shadow-lg shadow-main/50 border border-text-muted/20 flex flex-col transition-colors duration-300"
                     >
                       {actor.profile_path ? (
                         <img 
                           src={`https://image.tmdb.org/t/p/w276_and_h350_face${actor.profile_path}`} 
                           alt={actor.name} 
-                          className="w-full h-48 md:h-56 object-cover bg-gray-900"
+                          className="w-full h-48 md:h-56 object-cover bg-main"
                         />
                       ) : (
-                        <div className="w-full h-48 md:h-56 bg-gray-900 flex items-center justify-center text-gray-700">
+                        <div className="w-full h-48 md:h-56 bg-main flex items-center justify-center text-text-muted/50">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12">
                             <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
                           </svg>
                         </div>
                       )}
                       <div className="p-3 flex-1 flex flex-col justify-center">
-                        <p className="text-white font-semibold text-sm truncate" title={actor.name}>
+                        <p className="text-text-main font-semibold text-sm truncate" title={actor.name}>
                           {actor.name}
                         </p>
-                        <p className="text-gray-400 text-xs truncate mt-1" title={actor.character}>
+                        <p className="text-text-muted text-xs truncate mt-1" title={actor.character}>
                           {actor.character}
                         </p>
                       </div>
@@ -350,15 +361,16 @@ const Details = () => {
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#111] border border-gray-800 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl shadow-red-900/20 transform scale-100 transition-transform">
-            <h2 className="text-2xl font-bold text-white mb-4">Delete Media</h2>
-            <p className="text-gray-400 mb-8">
-              Are you sure you want to delete <span className="font-semibold text-white">"{media.title || media.name}"</span>? This action cannot be undone.
+          {/* UPDATED: Modal colors to match theme */}
+          <div className="bg-card-bg border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl transform scale-100 transition-all duration-300">
+            <h2 className="text-2xl font-bold text-text-main mb-4">Delete Media</h2>
+            <p className="text-text-muted mb-8">
+              Are you sure you want to delete <span className="font-semibold text-text-main">"{media.title || media.name}"</span>? This action cannot be undone.
             </p>
             <div className="flex gap-4 justify-end">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-6 py-2.5 rounded-xl font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                className="px-6 py-2.5 rounded-xl font-semibold bg-text-muted/20 text-text-main hover:bg-text-muted/30 transition-colors"
               >
                 Cancel
               </button>
