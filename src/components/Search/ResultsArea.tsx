@@ -2,6 +2,7 @@
 import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { type MediaItem } from './searchConstants';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
 // The individual card
 const MediaCard = memo(({ m }: { m: MediaItem }) => (
@@ -48,11 +49,8 @@ const ResultsArea = memo(({ query, searchStatus, hasSearched, filteredResults, c
     </div>
   );
   
-  if (searchStatus === "loading") return (
-    <div className="flex items-center justify-center py-32 w-full">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-btn-bg border-b-btn-bg"></div>
-    </div>
-  );
+  if (searchStatus === "loading")  return <LoadingSpinner />;
+
   
   if (hasSearched && filteredResults.length === 0) return (
     <div className="flex flex-col items-center justify-center text-center py-32 bg-card-bg/30 rounded-2xl border border-text-muted/20 border-dashed w-full">

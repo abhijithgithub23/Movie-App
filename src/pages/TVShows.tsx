@@ -5,6 +5,7 @@ import { getTVShows } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
 import HeroCarousel from "../components/Media/HeroCarousel";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,11 +59,7 @@ const TVShows = () => {
   };
 
   if (status === "loading" && page === 1) {
-    return (
-      <div className="flex items-center justify-center min-h-[80vh] bg-main transition-colors duration-300">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!shows.length || !trendingHeroShows.length) {

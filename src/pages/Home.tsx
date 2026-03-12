@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { getTrending } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 // --- TYPES ---
 interface MediaItem {
@@ -151,10 +152,16 @@ const Home = () => {
     highRated: trending.filter((m) => (m.vote_average ?? 0) > 7),
   }), [trending]);
 
-  if (status === "loading" || !trending.length) {
+  if (status === "loading") {
+    return <LoadingSpinner />;
+  }
+
+  // It's good practice to separate the "loading" state from the "empty" state 
+  // so users don't see an infinite spinner if the API returns 0 results!
+  if (!trending.length) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh] bg-main pt-2">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-transparent border-t-red-600 border-b-red-600"></div>
+      <div className="flex items-center justify-center min-h-[80vh] bg-main text-text-muted transition-colors duration-300">
+        No trending media found.
       </div>
     );
   }
