@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { editMedia } from '../features/media/mediaSlice';
 import { useNavigate, useParams } from 'react-router-dom';
 import { tmdbApi } from '../api/tmdb';
+import toast from 'react-hot-toast'; // 1. IMPORT TOAST
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 
@@ -158,11 +159,13 @@ const EditMedia = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // 2. UPDATE THE SUBMIT HANDLER
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!media || !id) return;
 
     if (!validateForm()) {
+      toast.error('Please fix the errors in the form.'); // Trigger error toast
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -188,8 +191,22 @@ const EditMedia = () => {
       }),
     };
 
-    dispatch(editMedia(updatedMedia));
-    navigate(`/details/${type}/${media.id}`);
+    try {
+      dispatch(editMedia(updatedMedia));
+      
+      // 3. ADD SUCCESS TOAST AND SETTIMEOUT FOR NAVIGATION
+      toast.success(`"${formData.title}" updated successfully!`, {
+        duration: 2000
+      });
+
+      setTimeout(() => {
+        navigate(`/details/${type}/${media.id}`);
+      }, 1000);
+
+    } catch (error) {
+      console.error("Failed to update media:", error);
+      toast.error('Failed to update media. Please try again.');
+    }
   };
 
   const toggleGenre = (genre: string) => {

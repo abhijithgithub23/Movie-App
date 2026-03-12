@@ -5,6 +5,7 @@ import { tmdbApi } from '../api/tmdb';
 import { deleteMedia } from '../features/media/mediaSlice';
 import { toggleFavorite } from '../features/favorites/favoritesSlice';
 import { useAuth0 } from '@auth0/auth0-react';
+import toast from 'react-hot-toast'; // 1. IMPORT TOAST HERE
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 
@@ -104,16 +105,38 @@ const Details = () => {
     return `${h > 0 ? h + 'h ' : ''}${m}m`;
   };
 
+  // 2. UPDATE YOUR confirmDelete LOGIC
   const confirmDelete = () => {
     if (media.id) {
-      dispatch(deleteMedia(media.id));
-      setShowDeleteModal(false);
-      navigate('/');
+      try {
+        dispatch(deleteMedia(media.id));
+        setShowDeleteModal(false);
+        
+        // Trigger the success toast
+        toast.success(`"${media.title || media.name}" was deleted successfully!`, {
+          duration: 2000
+        });
+
+        // Add a small delay before navigating back to home
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+
+      } catch (error) {
+        console.error("Failed to delete media:", error);
+        toast.error("Failed to delete media. Please try again.");
+      }
     }
   };
 
   const handleFavoriteToggle = () => {
     dispatch(toggleFavorite(media));
+    // Optional: You can also add a toast here for favorites!
+    // if (isFavorited) {
+    //   toast('Removed from favorites', { icon: '💔' });
+    // } else {
+    //   toast.success('Added to favorites!');
+    // }
   };
 
   return (
