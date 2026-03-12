@@ -287,7 +287,7 @@ const Search = () => {
 
               <button
                 type="submit"
-                className="absolute right-3 top-3 bottom-3 bg-btn-bg text-btn-text px-8 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-btn-bg/30"
+                className="absolute right-3 top-3 bottom-3 bg-btn-bg text-btn-text px-8 rounded-xl font-bold hover:opacity-90 transition-all shadow-btn-bg/30"
               >
                 Search
               </button>
