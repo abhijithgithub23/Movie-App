@@ -5,10 +5,9 @@ import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import LogoutModal from "../ui/LogoutModal";
 import { useTheme, type Theme } from "../../context/ThemeContext"; 
-import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, ChevronDown } from "lucide-react";
+import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, ChevronDown, User } from "lucide-react";
 
-// 1. STATIC DATA MOVED OUTSIDE: 
-// These arrays will now only be created ONCE when the file loads, saving memory and preserving references.
+// --- STATIC DATA ---
 const themeOptions = [
   { value: "dark", label: "Dark" },
   { value: "midnight", label: "Midnight" },
@@ -31,7 +30,9 @@ const languageOptionsMobile = [
   { value: "es", label: "Español" },
 ];
 
-// Reusable static function moved outside
+// Default avatar image link
+const DEFAULT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
+
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `text-lg font-medium transition flex items-center gap-2 ${
     isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
@@ -50,8 +51,6 @@ interface GlassyDropdownProps {
   isMobile?: boolean;
 }
 
-// 2. WRAPPED IN MEMO: 
-// This dropdown will now ONLY re-render if its specific value changes.
 const GlassyDropdown = memo(({ value, options, onChange, isMobile = false }: GlassyDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -110,9 +109,8 @@ const GlassyDropdown = memo(({ value, options, onChange, isMobile = false }: Gla
     </div>
   );
 });
-// --- END CUSTOM COMPONENT ---
 
-
+// --- MAIN NAVBAR COMPONENT ---
 const Navbar = () => {
   const { t } = useTranslation();
   const { isAuthenticated, loginWithRedirect, user } = useAuth0();
@@ -120,17 +118,28 @@ const Navbar = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   
   const isAdmin = user?.email === "abhijithksd23@gmail.com";
 
-  // 3. MEMOIZED HANDLERS:
-  // These prevent the GlassyDropdown from thinking it received a "new" function prop
   const handleThemeChange = useCallback((val: string) => {
     setTheme(val as Theme);
   }, [setTheme]);
 
   const handleLanguageChange = useCallback((val: string) => {
     i18n.changeLanguage(val);
+  }, []);
+
+  // Handle click outside for profile dropdown
+  useEffect(() => {
+    const handleClickOutsideProfile = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutsideProfile);
+    return () => document.removeEventListener("mousedown", handleClickOutsideProfile);
   }, []);
 
   return (
@@ -210,13 +219,56 @@ const Navbar = () => {
               />
 
               {isAuthenticated ? (
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="text-red-500 hover:text-red-400 transition-colors ml-2"
-                  title={t("logout") || "Logout"}
-                >
-                  <LogOut size={22} strokeWidth={2.5} />
-                </button>
+                <div className="relative ml-2" ref={profileRef}>
+                  <button
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-text-main/50 transition-colors focus:outline-none focus:ring-2 focus:ring-text-main/20"
+                    title={user?.name || "Profile"}
+                  >
+                    <img
+                      src={user?.picture || DEFAULT_AVATAR}
+                      alt="Profile"
+                      className="w-full h-full object-cover bg-text-main/10"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                      }}
+                    />
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className="absolute right-0 mt-3 min-w-[160px] bg-nav/90 backdrop-blur-xl border border-text-main/10 rounded-xl shadow-2xl py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="px-4 py-2 mb-1 border-b border-text-muted/10">
+                        <p className="text-sm font-semibold text-text-main truncate">{user?.name}</p>
+                        <p className="text-xs text-text-muted truncate">{user?.email}</p>
+                      </div>
+                      
+                      <NavLink
+                        to="/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className={({ isActive }) =>
+                          `w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                            isActive ? "bg-text-main/15 text-text-main font-semibold" : "text-text-muted hover:bg-text-main/10 hover:text-text-main"
+                          }`
+                        }
+                      >
+                        <User size={16} />
+                        {t("profile") || "Profile"}
+                      </NavLink>
+
+                      <button
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          setShowLogoutConfirm(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                      >
+                        <LogOut size={16} />
+                        {t("logout") || "Logout"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={() => loginWithRedirect()}
@@ -236,6 +288,7 @@ const Navbar = () => {
           </button>
         </div>
 
+        {/* MOBILE MENU */}
         {isOpen && (
           <div className="md:hidden bg-nav/95 backdrop-blur-xl px-6 pb-8 pt-4 flex flex-col gap-6 border-t border-text-muted/10">
 
@@ -288,23 +341,50 @@ const Navbar = () => {
             </div>
 
             {isAuthenticated ? (
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  setShowLogoutConfirm(true);
-                }}
-                className="bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-colors w-full py-3 rounded-sm font-bold flex items-center justify-center gap-2"
-              >
-                <LogOut size={20} />
-                {t("logout") || "Logout"}
-              </button>
+              <div className="flex flex-col gap-3 mt-2">
+                <div className="flex items-center gap-3 mb-2 px-2">
+                  <img
+                    src={user?.picture || DEFAULT_AVATAR}
+                    alt="Profile"
+                    className="w-full h-full object-cover bg-text-main/10"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                    }}
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-text-main">{user?.name}</p>
+                    <p className="text-xs text-text-muted">{user?.email}</p>
+                  </div>
+                </div>
+
+                <NavLink
+                  to="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="bg-text-main/5 border border-text-main/10 text-text-main hover:bg-text-main/10 transition-colors w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+                >
+                  <User size={20} />
+                  {t("profile") || "Profile"}
+                </NavLink>
+
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    setShowLogoutConfirm(true);
+                  }}
+                  className="bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-colors w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+                >
+                  <LogOut size={20} />
+                  {t("logout") || "Logout"}
+                </button>
+              </div>
             ) : (
-              <button
-                onClick={() => loginWithRedirect()}
-                className="bg-btn-bg text-btn-text w-full py-3 rounded-sm font-bold"
-              >
-                {t("login")}
-              </button>
+               <button
+                 onClick={() => loginWithRedirect()}
+                 className="bg-btn-bg text-btn-text w-full py-3 rounded-xl font-bold"
+               >
+                 {t("login")}
+               </button>
             )}
           </div>
         )}

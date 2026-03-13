@@ -3,7 +3,6 @@ import { AuthGuard } from './auth0/AuthGuard';
 import Navbar from './components/Layout/Navbar';
 import ScrollToTop from './components/Layout/ScrollToTop';
 
-// 1. IMPORT DIRECTLY FROM THE LIBRARY
 import { Toaster } from 'react-hot-toast';
 
 import Home from './pages/Home';
@@ -14,6 +13,7 @@ import Details from './pages/Details';
 import Favorites from './pages/Favorites';
 import AddMedia from './pages/AddMedia';
 import EditMedia from './pages/EditMedia';
+import ProfilePage from './pages/ProfilePage'; 
 import Footer from './components/Layout/Footer';
 
 function App() {
@@ -36,6 +36,8 @@ function App() {
             <Route path="/search" element={<AuthGuard><Search /></AuthGuard>} />
             <Route path="/favorites" element={<AuthGuard><Favorites /></AuthGuard>} />
             <Route path="/details/:type/:id" element={<AuthGuard><Details /></AuthGuard>} />
+            
+            <Route path="/profile" element={<AuthGuard><ProfilePage /></AuthGuard>} />
 
             <Route
               path="/admin/add"

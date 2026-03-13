@@ -8,14 +8,14 @@ import { useAuth0 } from '@auth0/auth0-react';
 import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
-import { useTheme } from '../context/ThemeContext'; // <-- IMPORT THEME CONTEXT
+import { useTheme } from '../context/ThemeContext'; 
 
 const Details = () => {
   const { id: paramId, type: paramType } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth0();
-  const { theme } = useTheme(); // <-- USE THEME
+  const { theme } = useTheme(); 
   
   const isAdmin = user?.email === 'abhijithksd23@gmail.com';
 
@@ -92,7 +92,6 @@ const Details = () => {
 
   if (!media) {
     return (
-      // UPDATED: bg-main and text-btn-bg
       <div className="flex justify-center items-center min-h-screen bg-main text-btn-bg transition-colors duration-300">
         <svg className="animate-spin h-10 w-10" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -151,7 +150,6 @@ const Details = () => {
 
   return (
     <>
-      {/* UPDATED: bg-main and text-text-main */}
       <div className="bg-main min-h-screen text-text-main pb-20 -mt-20 md:-mt-24 transition-colors duration-300">
         <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
           {backdropUrl ? (

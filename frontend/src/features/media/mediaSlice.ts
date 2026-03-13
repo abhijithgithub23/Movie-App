@@ -125,7 +125,7 @@ const mediaSlice = createSlice({
       if (!state.deleted.includes(id)) state.deleted.push(id);
     },
 
-    // NEW: Action to clear search results when the input becomes empty
+    // Action to clear search results when the input becomes empty
     clearSearchResults: (state) => {
       state.searchResults = [];
       state.status.searchResults = "idle";
@@ -210,6 +210,5 @@ const mediaSlice = createSlice({
   },
 });
 
-// REMEMBER to export the new clearSearchResults action here
 export const { addMedia, editMedia, deleteMedia, clearSearchResults } = mediaSlice.actions;
 export default mediaSlice.reducer;
