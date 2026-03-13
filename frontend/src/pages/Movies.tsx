@@ -24,7 +24,7 @@ const Movies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
 
-  // console.log("🎬 Parent MOVIES page rendered!"); 
+  // console.log("Parent MOVIES page rendered!"); 
 
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
@@ -71,7 +71,7 @@ const Movies = () => {
       setPage(nextPage);
       await dispatch(getMovies(nextPage));
       setIsFetchingMore(false);
-    }
+    }   
   }, [status, isFetchingMore, page, dispatch]);
 
   if (status === "loading" && page === 1) {

@@ -46,7 +46,7 @@ const EditMedia = () => {
     tagline: '',
     overview: '',
     poster_path: '',
-    backdrop_path: '',
+    backdrop_path: '',     
     media_type: 'movie',
     release_date: '',
     runtime: '',

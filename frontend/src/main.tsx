@@ -8,7 +8,7 @@ import { store, persistor } from './store/store';
 import App from './App';
 import './index.css';
 import "./i18n";
-import { ThemeProvider } from './context/ThemeContext'; // <-- ADD THIS
+import { ThemeProvider } from './context/ThemeContext';
 
 const AUTH0_DOMAIN = import.meta.env.VITE_AUTH0_DOMAIN;
 const AUTH0_CLIENT_ID = import.meta.env.VITE_AUTH0_CLIENT_ID;
@@ -26,7 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     >
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
-          <ThemeProvider> {/* <-- WRAP APP HERE */}
+          <ThemeProvider> 
             <App />
           </ThemeProvider>
         </PersistGate>

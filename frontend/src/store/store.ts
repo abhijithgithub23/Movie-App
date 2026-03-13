@@ -1,4 +1,3 @@
-// src/store/store.ts
 import { configureStore } from "@reduxjs/toolkit";
 import mediaReducer from "../features/media/mediaSlice";
 import favoritesReducer from "../features/favorites/favoritesSlice";

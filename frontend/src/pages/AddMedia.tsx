@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { addMedia } from '../features/media/mediaSlice';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast'; // Import toast
+import toast from 'react-hot-toast'; 
 import type { Media } from '../types';
 
 type FormData = {
@@ -93,11 +93,12 @@ const AddMedia = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      // Trigger error toast if validation fails
       toast.error('Please fix the errors in the form.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -124,12 +125,11 @@ const AddMedia = () => {
     try {
       dispatch(addMedia(newMedia as Media));
       
-      // Trigger success toast
       toast.success(`${formData.title} was added successfully!`, {
-        duration: 2000, // Explicitly set duration
+        duration: 2000, 
       });
       
-      // 1. DYNAMIC NAVIGATION LOGIC
+      //NAVIGATION LOGIC
       setTimeout(() => {
         if (formData.media_type === 'movie') {
           navigate('/movies');

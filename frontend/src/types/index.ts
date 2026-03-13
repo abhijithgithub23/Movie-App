@@ -16,7 +16,7 @@ export type Media = {
   popularity?: number;
   isCustom?: boolean;
 
-  genres?: { id: number; name: string }[]; // Keep this for the details page
+  genres?: { id: number; name: string }[]; 
   genre_ids?: number[];
 
   runtime?: number;
@@ -32,7 +32,7 @@ export type Media = {
       character: string;
       profile_path: string | null;
     }[];
-  };
+  }; 
 
 };
 

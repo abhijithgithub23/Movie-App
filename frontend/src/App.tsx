@@ -23,7 +23,6 @@ function App() {
       
       <div className="min-h-screen bg-main text-text-main font-sans transition-colors duration-300">
         
-        {/* 2. ADD IT DIRECTLY HERE WITH A MASSIVE Z-INDEX */}
         <Toaster containerStyle={{ zIndex: 999999 }} />
 
         <Navbar />

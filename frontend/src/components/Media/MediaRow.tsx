@@ -10,7 +10,7 @@ interface MediaRowProps {
 
 const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
 
-  // console.log(`🍿 Sibling MediaRow rendered: ${title}`); 
+  // console.log(` Sibling MediaRow rendered: ${title}`); 
 
   const rowRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
@@ -24,7 +24,11 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
 
   const scroll = (direction: "left" | "right") => {
     if (!rowRef.current) return;
+    console.log(rowRef,'rowref');
+    
     const { clientWidth } = rowRef.current;
+    console.log(clientWidth,'clientWidth');
+    
     const scrollAmount = direction === "left" ? -clientWidth : clientWidth;
     rowRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };

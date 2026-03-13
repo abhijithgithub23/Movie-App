@@ -37,7 +37,7 @@ export const fetchDetails = (type: "movie" | "tv", id: number | string) =>
 
 
 
-//----------------------------------------------FOR DEBUGGING PURPOSES ONLY
+//----------------------------------------------FOR DEBUGGING PURPOSES ONLY---------------------------------------
 // async function testTMDB() {
 //   try {
 //     const trending = await fetchTrending();

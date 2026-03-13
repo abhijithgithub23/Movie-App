@@ -18,6 +18,8 @@ export const AuthGuard = ({ children, requireAdmin = false }: Props) => {
   }
 
   if (requireAdmin && user?.email !== 'abhijithksd23@gmail.com') {
+    // console.log(user,'use')
+    
     return <Navigate to="/" replace />;
   }
 

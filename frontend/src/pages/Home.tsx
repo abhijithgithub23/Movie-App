@@ -156,8 +156,7 @@ const Home = () => {
     return <LoadingSpinner />;
   }
 
-  // It's good practice to separate the "loading" state from the "empty" state 
-  // so users don't see an infinite spinner if the API returns 0 results!
+  // separate the "loading" state from the "empty" state 
   if (!trending.length) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] bg-main text-text-muted transition-colors duration-300">
@@ -178,5 +177,5 @@ const Home = () => {
     </div>
   );
 };
-
-export default Home;
+   
+export default Home;  
