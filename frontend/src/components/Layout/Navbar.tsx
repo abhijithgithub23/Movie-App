@@ -342,20 +342,33 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="flex flex-col gap-3 mt-2">
+
+                {/* USER INFO */}
                 <div className="flex items-center gap-3 mb-2 px-2">
-                  <img
-                    src={user?.picture || DEFAULT_AVATAR}
-                    alt="Profile"
-                    className="w-full h-full object-cover bg-text-main/10"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
-                    }}
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-text-main">{user?.name}</p>
-                    <p className="text-xs text-text-muted">{user?.email}</p>
+
+                  {/* FIXED SIZE AVATAR */}
+                  <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                    <img
+                      src={user?.picture || DEFAULT_AVATAR}
+                      alt="Profile"
+                      className="w-full h-full object-cover bg-text-main/10"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                      }}
+                    />
                   </div>
+
+                  {/* USER TEXT */}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-text-main truncate">
+                      {user?.name}
+                    </p>
+                    <p className="text-xs text-text-muted truncate">
+                      {user?.email}
+                    </p>
+                  </div>
+
                 </div>
 
                 <NavLink
@@ -377,14 +390,15 @@ const Navbar = () => {
                   <LogOut size={20} />
                   {t("logout") || "Logout"}
                 </button>
+
               </div>
             ) : (
-               <button
-                 onClick={() => loginWithRedirect()}
-                 className="bg-btn-bg text-btn-text w-full py-3 rounded-xl font-bold"
-               >
-                 {t("login")}
-               </button>
+              <button
+                onClick={() => loginWithRedirect()}
+                className="bg-btn-bg text-btn-text w-full py-3 rounded-xl font-bold"
+              >
+                {t("login")}
+              </button>
             )}
           </div>
         )}
