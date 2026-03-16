@@ -101,15 +101,22 @@ const Details = () => {
     );
   }
 
+  // --- IMAGE URL LOGIC FIX ---
+  const isValidAbsoluteUrl = (path: string) => 
+    path.startsWith('http') || path.startsWith('data:image/') || path.startsWith('blob:');
+
   const posterUrl = media.poster_path
-    ? media.poster_path.startsWith('http')
+    ? isValidAbsoluteUrl(media.poster_path)
       ? media.poster_path
       : `https://image.tmdb.org/t/p/w500${media.poster_path}`
     : '/placeholder.jpg';
 
   const backdropUrl = media.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${media.backdrop_path}`
+    ? isValidAbsoluteUrl(media.backdrop_path)
+      ? media.backdrop_path
+      : `https://image.tmdb.org/t/p/original${media.backdrop_path}`
     : null;
+  // ---------------------------
 
   const formatCurrency = (amount?: number) => {
     if (!amount) return 'N/A';
@@ -161,14 +168,14 @@ const Details = () => {
             <div className="absolute inset-0 bg-main/20" />
           )}
           
-          {/* UPDATED: Conditional gradients to hide on light theme */}
+          {/* Conditional gradients to hide on light theme */}
           <div className={`absolute inset-0 transition-colors duration-1000 ${theme === 'light' ? 'bg-transparent' : 'bg-gradient-to-t from-main via-main/60 to-transparent'}`} />
           <div className={`absolute inset-0 transition-colors duration-1000 ${theme === 'light' ? 'bg-transparent' : 'bg-gradient-to-r from-main/90 via-main/40 to-transparent'}`} />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 -mt-72 md:-mt-96 relative z-10 flex flex-col md:flex-row gap-8 md:gap-16">
           <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 flex flex-col items-center">
-            {/* UPDATED: Shadow matches theme main background */}
+            {/* Shadow matches theme main background */}
             <img
               src={posterUrl}
               alt={media.title || media.name}
@@ -189,7 +196,7 @@ const Details = () => {
                   viewBox="0 0 24 24" 
                   strokeWidth="1.5" 
                   stroke="currentColor" 
-                  // UPDATED: Text color for favorite icon
+                  // Text color for favorite icon
                   className={`w-10 h-10 transition-colors ${isFavorited ? 'text-btn-bg' : 'text-text-main'}`}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
@@ -273,7 +280,6 @@ const Details = () => {
             {media.genres && media.genres.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-10">
                 {media.genres.map((g) => (
-                  // UPDATED: Dynamic genre pills
                   <span key={g.id} className="bg-btn-bg/10 text-btn-bg border border-btn-bg/30 px-4 py-1.5 rounded-full text-sm font-medium tracking-wide">
                     {g.name}
                   </span>
@@ -288,7 +294,7 @@ const Details = () => {
               </p>
             </div>
 
-            {/* UPDATED: border-text-muted/20 */}
+            {/* border-text-muted/20 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-text-muted/20">
               {(media.budget ?? 0) > 0 && (
                 <div>
@@ -321,7 +327,6 @@ const Details = () => {
                 <h3 className="text-2xl font-bold text-text-main mb-6">Top Cast</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                   {media.credits.cast.slice(0, 10).map((actor) => (
-                    // UPDATED: bg-card-bg
                     <div 
                       key={actor.id} 
                       className="bg-card-bg rounded-xl overflow-hidden shadow-lg shadow-main/50 border border-text-muted/20 flex flex-col transition-colors duration-300"
@@ -359,7 +364,7 @@ const Details = () => {
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
-          {/* UPDATED: Modal colors to match theme */}
+          {/* Modal colors to match theme */}
           <div className="bg-card-bg border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl transform scale-100 transition-all duration-300">
             <h2 className="text-2xl font-bold text-text-main mb-4">Delete Media</h2>
             <p className="text-text-muted mb-8">

@@ -1,0 +1,47 @@
+import { Routes, Route } from "react-router-dom";
+import { Suspense, lazy } from "react";
+
+import MainLayout from "../layouts/MainLayout";
+import ProtectedRoutes from "./ProtectedRoutes";
+import AdminRoutes from "./AdminRoutes";
+
+/* Lazy loaded pages */
+const Home = lazy(() => import("../pages/Home"));
+const Movies = lazy(() => import("../pages/Movies"));
+const TVShows = lazy(() => import("../pages/TVShows"));
+const Search = lazy(() => import("../pages/Search"));
+const Details = lazy(() => import("../pages/Details"));
+const Favorites = lazy(() => import("../pages/Favorites"));
+const AddMedia = lazy(() => import("../pages/AddMedia"));
+const EditMedia = lazy(() => import("../pages/EditMedia"));
+const NotFound = lazy(() => import("../pages/NotFound"));
+
+export default function AppRoutes() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Routes>
+
+        <Route element={<MainLayout />}>
+
+          <Route element={<ProtectedRoutes />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/movies" element={<Movies />} />
+            <Route path="/tv" element={<TVShows />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/details/:type/:id" element={<Details />} />
+          </Route>
+
+          <Route element={<AdminRoutes />}>
+            <Route path="/admin/add" element={<AddMedia />} />
+            <Route path="/admin/edit/:type/:id" element={<EditMedia />} />
+          </Route>
+
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+
+      </Routes>
+    </Suspense>
+  );
+}

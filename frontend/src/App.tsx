@@ -1,56 +1,19 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthGuard } from './auth0/AuthGuard';
-import Navbar from './components/Layout/Navbar';
-import ScrollToTop from './components/Layout/ScrollToTop';
+import { BrowserRouter as Router } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
-import { Toaster } from 'react-hot-toast';
-
-import Home from './pages/Home';
-import Movies from './pages/Movies';
-import TVShows from './pages/TVShows';
-import Search from './pages/Search';
-import Details from './pages/Details';
-import Favorites from './pages/Favorites';
-import AddMedia from './pages/AddMedia';
-import EditMedia from './pages/EditMedia';
-import ProfilePage from './pages/ProfilePage'; 
-import Footer from './components/Layout/Footer';
+import ScrollToTop from "./components/Layout/ScrollToTop";
+import AppRoutes from "./routes/AppRoutes";
 
 function App() {
   return (
     <Router>
+
       <ScrollToTop />
-      
-      <div className="min-h-screen bg-main text-text-main font-sans transition-colors duration-300">
-        
-        <Toaster containerStyle={{ zIndex: 999999 }} />
 
-        <Navbar />
+      <Toaster containerStyle={{ zIndex: 999999 }} />
 
-        <main className="pt-16">
-          <Routes>
-            <Route path="/" element={<AuthGuard><Home /></AuthGuard>} />
-            <Route path="/movies" element={<AuthGuard><Movies /></AuthGuard>} />
-            <Route path="/tv" element={<AuthGuard><TVShows /></AuthGuard>} />
-            <Route path="/search" element={<AuthGuard><Search /></AuthGuard>} />
-            <Route path="/favorites" element={<AuthGuard><Favorites /></AuthGuard>} />
-            <Route path="/details/:type/:id" element={<AuthGuard><Details /></AuthGuard>} />
-            
-            <Route path="/profile" element={<AuthGuard><ProfilePage /></AuthGuard>} />
+      <AppRoutes />
 
-            <Route
-              path="/admin/add"
-              element={<AuthGuard requireAdmin={true}><AddMedia /></AuthGuard>}
-            />
-
-            <Route
-              path="/admin/edit/:type/:id"
-              element={<AuthGuard requireAdmin={true}><EditMedia /></AuthGuard>}
-            />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
     </Router>
   );
 }
