@@ -11,10 +11,17 @@ interface MediaCardProps {
 const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
   const dispatch = useDispatch();
   
-  // Determine if it's a custom local image or a TMDB image
-  const imageSrc = media.poster_path 
-    ? (media.poster_path.startsWith('http') ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`) 
-    : null;
+  // Helper function to handle TMDB paths, HTTP links, Base64 (data:), and local blob URLs
+  const getPosterUrl = (path?: string) => {
+    if (!path) return null;
+    if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("blob:")) {
+      return path;
+    }
+    const tmdbPath = path.startsWith('/') ? path : `/${path}`;
+    return `https://image.tmdb.org/t/p/w500${tmdbPath}`;
+  };
+
+  const imageSrc = getPosterUrl(media.poster_path);
 
   const title = media.title || media.name;
   const mediaType = media.media_type || 'movie';
@@ -81,14 +88,7 @@ const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
             Edit
           </Link>
           <button 
-            onClick={() =>
-              dispatch(
-                deleteMedia({
-                  id: media.id,
-                  type: mediaType === "tv" ? "tvShows" : "movies"
-                })
-              )
-            }
+            onClick={() => dispatch(deleteMedia(media.id))}
             className="flex-1 text-center text-xs bg-red-900/20 text-red-500 border border-red-900/40 px-3 py-2.5 rounded-lg font-bold hover:bg-red-600 hover:text-white transition-all duration-300"
           >
             Delete

@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 
-// ADD 'export' TO THIS LINE
 export type Theme = "dark" | "light" | "midnight" | "dracula" | "forest" | "solarized";
 
 interface ThemeContextType {

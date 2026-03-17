@@ -1,11 +1,12 @@
-import { memo, useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import LogoutModal from "../ui/LogoutModal";
+import GlassyDropdown from "../ui/GlassyDropdown"; // Assumes path is here
 import { useTheme, type Theme } from "../../context/ThemeContext"; 
-import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, ChevronDown, User } from "lucide-react";
+import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, User } from "lucide-react";
 
 // --- STATIC DATA ---
 const themeOptions = [
@@ -30,7 +31,6 @@ const languageOptionsMobile = [
   { value: "es", label: "Español" },
 ];
 
-// Default avatar image link
 const DEFAULT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -38,79 +38,6 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
   }`;
 
-// --- CUSTOM GLASSY DROPDOWN COMPONENT ---
-interface DropdownOption {
-  value: string;
-  label: string;
-}
-
-interface GlassyDropdownProps {
-  value: string;
-  options: DropdownOption[];
-  onChange: (value: string) => void;
-  isMobile?: boolean;
-}
-
-const GlassyDropdown = memo(({ value, options, onChange, isMobile = false }: GlassyDropdownProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedLabel = options.find((opt) => opt.value === value)?.label || options[0].label;
-
-  return (
-    <div className={`relative ${isMobile ? "flex-1" : ""}`} ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-3 bg-text-main/5 backdrop-blur-md border border-text-main/10 shadow-sm text-text-main text-sm rounded-xl outline-none hover:bg-text-main/10 focus:ring-2 focus:ring-text-main/20 transition-all duration-300 ${
-          isMobile ? "px-3 py-3" : "px-3 py-1.5"
-        }`}
-      >
-        <span className="truncate">{selectedLabel}</span>
-        <ChevronDown 
-          size={16} 
-          className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} 
-        />
-      </button>
-
-      {isOpen && (
-        <div 
-          className={`absolute left-0 mt-2 min-w-[140px] w-full bg-nav/70 backdrop-blur-xl border border-text-main/10 rounded-xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 ${
-            isMobile ? "bottom-full mb-2 mt-0" : "top-full"
-          }`}
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => {
-                onChange(opt.value);
-                setIsOpen(false);
-              }}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                value === opt.value
-                  ? "bg-text-main/15 text-text-main font-semibold"
-                  : "text-text-muted hover:bg-text-main/10 hover:text-text-main"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
-
-// --- MAIN NAVBAR COMPONENT ---
 const Navbar = () => {
   const { t } = useTranslation();
   const { isAuthenticated, loginWithRedirect, user } = useAuth0();
@@ -151,6 +78,7 @@ const Navbar = () => {
             CINEVIA
           </NavLink>
 
+          {/* DESKTOP NAVIGATION */}
           <div className="hidden md:flex gap-8 items-center">
             <NavLink to="/" className={linkClass}>
               <Home size={22} strokeWidth={2.5} />
@@ -280,6 +208,7 @@ const Navbar = () => {
             </div>
           </div>
 
+          {/* MOBILE TOGGLE */}
           <button
             className="md:hidden text-text-main focus:outline-none"
             onClick={() => setIsOpen(!isOpen)}
@@ -291,7 +220,6 @@ const Navbar = () => {
         {/* MOBILE MENU */}
         {isOpen && (
           <div className="md:hidden bg-nav/95 backdrop-blur-xl px-6 pb-8 pt-4 flex flex-col gap-6 border-t border-text-muted/10">
-
             <NavLink to="/" className={linkClass} onClick={() => setIsOpen(false)}>
               <Home size={24} /> {t("home")}
             </NavLink>
@@ -342,11 +270,7 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="flex flex-col gap-3 mt-2">
-
-                {/* USER INFO */}
                 <div className="flex items-center gap-3 mb-2 px-2">
-
-                  {/* FIXED SIZE AVATAR */}
                   <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
                     <img
                       src={user?.picture || DEFAULT_AVATAR}
@@ -358,8 +282,6 @@ const Navbar = () => {
                       }}
                     />
                   </div>
-
-                  {/* USER TEXT */}
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-text-main truncate">
                       {user?.name}
@@ -368,7 +290,6 @@ const Navbar = () => {
                       {user?.email}
                     </p>
                   </div>
-
                 </div>
 
                 <NavLink
@@ -390,7 +311,6 @@ const Navbar = () => {
                   <LogOut size={20} />
                   {t("logout") || "Logout"}
                 </button>
-
               </div>
             ) : (
               <button

@@ -10,13 +10,24 @@ interface MediaRowProps {
 
 const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
 
-  // console.log(` Sibling MediaRow rendered: ${title}`); 
-
   const rowRef = useRef<HTMLDivElement>(null);
   const observerTarget = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // 1. Keep track of the latest onLoadMore function without triggering effect re-runs
+  // Helper function to handle any type of image URL
+  const getPosterUrl = (path?: string) => {
+    if (!path) return "/placeholder.jpg";
+    
+    // Check if it's already a full web link, a base64 string, or a local blob
+    if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("blob:")) {
+      return path;
+    }
+    
+    // Ensure TMDB paths have a leading slash just in case
+    const tmdbPath = path.startsWith('/') ? path : `/${path}`;
+    return `https://image.tmdb.org/t/p/w500${tmdbPath}`;
+  };
+
   const savedOnLoadMore = useRef(onLoadMore);
   useEffect(() => {
     savedOnLoadMore.current = onLoadMore;
@@ -24,10 +35,8 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
 
   const scroll = (direction: "left" | "right") => {
     if (!rowRef.current) return;
-    console.log(rowRef,'rowref');
     
     const { clientWidth } = rowRef.current;
-    console.log(clientWidth,'clientWidth');
     
     const scrollAmount = direction === "left" ? -clientWidth : clientWidth;
     rowRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
@@ -39,12 +48,10 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
   };
 
   useEffect(() => {
-    // 2. Safety check: ensure the DOM elements exist before setting up the observer
     if (!rowRef.current || !observerTarget.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // 3. Call the saved function instead of the dependency
         if (entries[0].isIntersecting && savedOnLoadMore.current) {
           savedOnLoadMore.current();
         }
@@ -59,7 +66,7 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
     observer.observe(observerTarget.current);
 
     return () => observer.disconnect();
-  }, []); // 4. Empty dependency array: the observer is set up exactly once
+  }, []);
 
   return (
     <div className="relative">
@@ -99,11 +106,7 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
               {/* Image Wrapper */}
               <div className="relative overflow-hidden rounded-lg h-[250px] md:h-[300px] lg:h-[350px] transform transition-transform duration-300 hover:scale-105">
                 <img
-                  src={
-                    m.poster_path
-                      ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-                      : "/placeholder.jpg"
-                  }
+                  src={getPosterUrl(m.poster_path)}
                   alt={m.title || m.name}
                   className="w-full h-full object-cover"
                 />
@@ -115,7 +118,6 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
             </div>
           ))}
           
-          {/* Added h-full to ensure the observer has vertical space to intersect with */}
           <div ref={observerTarget} className="w-10 h-full flex-shrink-0" />
         </div>
       </div>

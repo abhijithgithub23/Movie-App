@@ -1,5 +1,6 @@
 // src/features/favorites/favoritesSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { deleteMedia } from '../media/mediaSlice'; // 1. Import the delete action
 import type { Media } from '../../types';
 
 interface FavoritesState {
@@ -27,6 +28,16 @@ const favoritesSlice = createSlice({
         state.items.push(action.payload);
       }
     },
+  },
+  // 2. Add extraReducers to intercept actions from other slices
+  extraReducers: (builder) => {
+    builder.addCase(deleteMedia, (state, action) => {
+      // action.payload is the ID of the deleted media. 
+      // We filter it out of the favorites array automatically!
+      state.items = state.items.filter(
+        (item) => String(item.id) !== String(action.payload)
+      );
+    });
   },
 });
 
