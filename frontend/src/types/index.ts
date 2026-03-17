@@ -25,14 +25,14 @@ export type Media = {
   revenue?: number;
   vote_count?: number;
 
-  credits?: {
-    cast: {
-      id: number;
-      name: string;
-      character: string;
-      profile_path: string | null;
-    }[];
-  }; 
+  // credits?: {
+  //   cast: {
+  //     id: number;
+  //     name: string;
+  //     character: string;
+  //     profile_path: string | null;
+  //   }[];
+  // }; 
 
 };
 

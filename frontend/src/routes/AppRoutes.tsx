@@ -16,13 +16,15 @@ const AddMedia = lazy(() => import("../pages/AddMedia"));
 const EditMedia = lazy(() => import("../pages/EditMedia"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 
-/* Lazy loaded Auth pages */
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const SignupPage = lazy(() => import("../pages/SignupPage"));
 
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+
+
 export default function AppRoutes() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<LoadingSpinner />}>
       <Routes>
 
         {/* --- Public Auth Routes --- */}
