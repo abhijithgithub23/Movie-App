@@ -16,11 +16,20 @@ const AddMedia = lazy(() => import("../pages/AddMedia"));
 const EditMedia = lazy(() => import("../pages/EditMedia"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 
+/* Lazy loaded Auth pages */
+const LoginPage = lazy(() => import("../pages/LoginPage"));
+const SignupPage = lazy(() => import("../pages/SignupPage"));
+
 export default function AppRoutes() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <Routes>
 
+        {/* --- Public Auth Routes --- */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+
+        {/* --- Main App Routes --- */}
         <Route element={<MainLayout />}>
 
           <Route element={<ProtectedRoutes />}>

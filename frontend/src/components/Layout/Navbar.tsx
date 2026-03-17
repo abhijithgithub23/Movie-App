@@ -4,7 +4,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import LogoutModal from "../ui/LogoutModal";
-import GlassyDropdown from "../ui/GlassyDropdown"; // Assumes path is here
+import GlassyDropdown from "../ui/GlassyDropdown"; 
 import { useTheme, type Theme } from "../../context/ThemeContext"; 
 import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, User } from "lucide-react";
 
