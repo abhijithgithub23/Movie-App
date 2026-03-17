@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react"; // Added useCallback
+import { useEffect, useState, useMemo, useCallback } from "react"; 
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { getMovies } from "../features/media/mediaSlice";
@@ -6,6 +6,9 @@ import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
 import HeroCarousel from "../components/Media/HeroCarousel";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+
+// Module-level variable
+let lastFetchedMoviesLang = "";
 
 interface MovieData {
   id: string | number;
@@ -24,14 +27,11 @@ const Movies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
 
-  // console.log("Parent MOVIES page rendered!"); 
-
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
 
   const [page, setPage] = useState(() => {
-    const lastLang = sessionStorage.getItem('cv_movies_lang');
-    return lastLang === i18n.language ? Math.max(1, Math.ceil(rawMovies.length / 20)) : 1;
+    return lastFetchedMoviesLang === i18n.language ? Math.max(1, Math.ceil(rawMovies.length / 20)) : 1;
   });
   
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -56,14 +56,12 @@ const Movies = () => {
   );
 
   useEffect(() => {
-    const lastLang = sessionStorage.getItem('cv_movies_lang');
-    if (rawMovies.length === 0 || lastLang !== i18n.language) {
+    if (rawMovies.length === 0 || lastFetchedMoviesLang !== i18n.language) {
       dispatch(getMovies(1));
-      sessionStorage.setItem('cv_movies_lang', i18n.language);
+      lastFetchedMoviesLang = i18n.language; // Update JS memory
     }
   }, [dispatch, i18n.language, rawMovies.length]);
 
-  // Memoize the function so it doesn't break MediaRow's memoization
   const handleLoadMore = useCallback(async () => {
     if (status !== "loading" && !isFetchingMore) {
       setIsFetchingMore(true);

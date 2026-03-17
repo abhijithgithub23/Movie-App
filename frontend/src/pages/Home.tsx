@@ -7,6 +7,9 @@ import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 
+// Module-level variable to track the language of the currently fetched Redux data
+let lastFetchedTrendingLang = "";
+
 // --- TYPES ---
 interface MediaItem {
   id: number;
@@ -139,10 +142,9 @@ const Home = () => {
   const status = useSelector((state: RootState) => state.media.status.trending);
 
   useEffect(() => {
-    const lastLang = sessionStorage.getItem("cv_trending_lang");
-    if (trending.length === 0 || lastLang !== i18n.language) {
+    if (trending.length === 0 || lastFetchedTrendingLang !== i18n.language) {
       dispatch(getTrending());
-      sessionStorage.setItem("cv_trending_lang", i18n.language);
+      lastFetchedTrendingLang = i18n.language; // Update JS memory instead of sessionStorage
     }
   }, [dispatch, i18n.language, trending.length]);
 
@@ -156,7 +158,6 @@ const Home = () => {
     return <LoadingSpinner />;
   }
 
-  // separate the "loading" state from the "empty" state 
   if (!trending.length) {
     return (
       <div className="flex items-center justify-center min-h-[80vh] bg-main text-text-muted transition-colors duration-300">
@@ -178,4 +179,4 @@ const Home = () => {
   );
 };
    
-export default Home;  
+export default Home;

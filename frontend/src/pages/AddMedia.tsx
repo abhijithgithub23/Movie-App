@@ -61,7 +61,7 @@ const AddMedia = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Optional but highly recommended: Limit file size to 2MB to prevent Redux/localStorage from crashing
+    // Limit file size to 2MB to prevent Redux/localStorage from crashing
     const maxSizeInBytes = 2 * 1024 * 1024; 
     if (file.size > maxSizeInBytes) {
       toast.error(`Image is too large. Please select an image under 2MB.`);

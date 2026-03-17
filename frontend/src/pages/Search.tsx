@@ -1,10 +1,8 @@
-// src/pages/Search/Search.tsx
 import React, { useState, useMemo, useEffect, useCallback, useTransition } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { searchMediaThunk, clearSearchResults } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
 
-// Import your newly split components
 import {type FilterState, type MediaItem } from '../components/Search/searchConstants';
 import SearchForm from '../components/Search/SearchForm';
 import FilterSidebar from '../components/Search/FilterSidebar';

@@ -63,9 +63,10 @@ const EditMedia = () => {
     const populateForm = (finalMedia: Media) => {
       setMedia(finalMedia);
 
+      // 1. Updated getFullUrl to recognize existing Base64 strings, Blobs, and standard URLs
       const getFullUrl = (path: string | undefined, size: 'w500' | 'original') => {
         if (!path) return '';
-        if (path.startsWith('http')) return path;
+        if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('blob:')) return path;
         return `https://image.tmdb.org/t/p/${size}${path}`;
       };
 
@@ -86,7 +87,6 @@ const EditMedia = () => {
       setIsLoading(false);
     };
 
-    // CHECK FOR PASSED DATA FIRST TO AVOID API CALL
     const passedMedia = location.state?.fullMedia;
     
     if (passedMedia) {
@@ -94,7 +94,6 @@ const EditMedia = () => {
       return; 
     }
 
-    // FALLBACK IF PAGE WAS REFRESHED MANUALLY
     const fetchMedia = async () => {
       const foundRedux: Media | undefined =
         customMovies.find((m) => String(m.id) === id) ||
@@ -138,13 +137,44 @@ const EditMedia = () => {
     fetchMedia();
   }, [id, type, trending, movies, tvShows, customMovies, navigate, location.state]);
 
-  const isValidUrl = (url: string) => {
+  // 2. Updated to validate Base64 image sources as well as standard URLs
+  const isValidImageSource = (source: string) => {
+    if (source.startsWith('data:image/')) return true;
     try {
-      new URL(url);
+      new URL(source);
       return true;
     } catch {
       return false;
     }
+  };
+
+  // 3. Added File Upload Handler logic
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSizeInBytes = 2 * 1024 * 1024; // 2MB limit
+    if (file.size > maxSizeInBytes) {
+      toast.error(`Image is too large. Please select an image under 2MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = () => {
+      const base64String = reader.result as string;
+      setFormData((prev) => ({ ...prev, [fieldName]: base64String }));
+      
+      if (errors[fieldName]) {
+        setErrors((prev) => ({ ...prev, [fieldName]: undefined }));
+      }
+    };
+    
+    reader.onerror = (error) => {
+      console.error('Error reading file:', error);
+      toast.error('Failed to process image file.');
+    };
   };
 
   const validateForm = () => {
@@ -156,12 +186,12 @@ const EditMedia = () => {
     
     if (!formData.poster_path.trim()) {
       newErrors.poster_path = 'Poster Image URL is required';
-    } else if (!isValidUrl(formData.poster_path)) {
-      newErrors.poster_path = 'Must be a valid URL (e.g., https://...)';
+    } else if (!isValidImageSource(formData.poster_path)) {
+      newErrors.poster_path = 'Must be a valid URL or uploaded image';
     }
 
-    if (formData.backdrop_path && !isValidUrl(formData.backdrop_path)) {
-      newErrors.backdrop_path = 'Must be a valid URL (e.g., https://...)';
+    if (formData.backdrop_path && !isValidImageSource(formData.backdrop_path)) {
+      newErrors.backdrop_path = 'Must be a valid URL or uploaded image';
     }
 
     if (!formData.release_date) newErrors.release_date = 'Release date is required';
@@ -399,39 +429,69 @@ const EditMedia = () => {
              </div>
           </div>
 
-          {/* SECTION 3: Images */}
+          {/* SECTION 3: Images (Now with File Uploads) */}
           <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
              <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Media Assets</h3>
              
+             {/* Poster Upload/URL */}
              <div>
-                <label className="block text-gray-400 font-medium mb-2">Poster Image URL <span className="text-yellow-500">*</span></label>
-                <input
-                  name="poster_path"
-                  type="text"
-                  placeholder="https://example.com/poster.jpg"
-                  className={`w-full p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500 mb-4`}
-                  value={formData.poster_path}
-                  onChange={handleInputChange}
-                />
+                <label className="block text-gray-400 font-medium mb-2">Poster Image <span className="text-yellow-500">*</span></label>
+                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                  <input
+                    name="poster_path"
+                    type="text"
+                    placeholder="Paste image URL here..."
+                    className={`flex-1 p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
+                    value={formData.poster_path}
+                    onChange={handleInputChange}
+                  />
+                  <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload File
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleFileUpload(e, 'poster_path')}
+                    />
+                  </label>
+                </div>
                 {errors.poster_path && <p className="text-red-500 text-sm mt-1 mb-4">{errors.poster_path}</p>}
                 
-                {formData.poster_path && isValidUrl(formData.poster_path) && (
-                  <div className="relative w-32 rounded-lg overflow-hidden border border-gray-700 shadow-xl">
+                {formData.poster_path && isValidImageSource(formData.poster_path) && (
+                  <div className="relative w-32 rounded-lg overflow-hidden border border-gray-700 shadow-xl mt-2">
                     <img src={formData.poster_path} alt="Poster Preview" className="w-full h-auto object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
                   </div>
                 )}
              </div>
 
-             <div className="pt-4">
-                <label className="block text-gray-400 font-medium mb-2">Background Cover URL (Optional)</label>
-                <input
-                  name="backdrop_path"
-                  type="text"
-                  placeholder="https://example.com/cover.jpg"
-                  className={`w-full p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
-                  value={formData.backdrop_path}
-                  onChange={handleInputChange}
-                />
+             {/* Backdrop Upload/URL */}
+             <div className="pt-4 border-t border-gray-800">
+                <label className="block text-gray-400 font-medium mb-2">Background Cover (Optional)</label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    name="backdrop_path"
+                    type="text"
+                    placeholder="Paste image URL here..."
+                    className={`flex-1 p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
+                    value={formData.backdrop_path}
+                    onChange={handleInputChange}
+                  />
+                  <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Upload File
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => handleFileUpload(e, 'backdrop_path')}
+                    />
+                  </label>
+                </div>
                 {errors.backdrop_path && <p className="text-red-500 text-sm mt-1">{errors.backdrop_path}</p>}
              </div>
           </div>

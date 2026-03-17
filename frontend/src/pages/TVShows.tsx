@@ -7,19 +7,18 @@ import MediaRow from "../components/Media/MediaRow";
 import HeroCarousel from "../components/Media/HeroCarousel";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 
+// Module-level variable
+let lastFetchedTvLang = "";
+
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
-
-    // console.log("🎬 Parent TV page rendered!"); 
-
 
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
 
   const [page, setPage] = useState(() => {
-    const lastLang = sessionStorage.getItem('cv_tv_lang');
-    return lastLang === i18n.language ? Math.max(1, Math.ceil(rawShows.length / 20)) : 1;
+    return lastFetchedTvLang === i18n.language ? Math.max(1, Math.ceil(rawShows.length / 20)) : 1;
   });
   
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -44,10 +43,9 @@ const TVShows = () => {
   );
 
   useEffect(() => {
-    const lastLang = sessionStorage.getItem('cv_tv_lang');
-    if (rawShows.length === 0 || lastLang !== i18n.language) {
+    if (rawShows.length === 0 || lastFetchedTvLang !== i18n.language) {
       dispatch(getTVShows(1));
-      sessionStorage.setItem('cv_tv_lang', i18n.language);
+      lastFetchedTvLang = i18n.language; // Update JS memory
     }
   }, [dispatch, i18n.language, rawShows.length]);
 
