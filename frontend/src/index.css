@@ -93,3 +93,37 @@
 .animate-fade {
   animation: fadeIn 1s ease forwards;
 }
+
+
+/* Add this to your main CSS file */
+html, body, #root {
+  height: 100vh;
+  margin: 0;
+  overflow: hidden; /* This kills the native browser scrollbar */
+}
+
+
+/* 1. For Firefox */
+* {
+  scrollbar-width: thin;
+  /* First color is the "thumb" (the part you drag), second is the "track" (the background) */
+  scrollbar-color: #4b5563 #111827; /* Adjust these hex codes to match your app's exact colors */
+}
+
+/* 2. For Chrome, Edge, Safari (WebKit) */
+::-webkit-scrollbar {
+  width: 8px; /* Make it a nice, thin scrollbar */
+}
+
+::-webkit-scrollbar-track {
+  background: #111827; /* The track background (make this match your bg-main) */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #4b5563; /* The draggable part (make this slightly lighter) */
+  border-radius: 10px;       /* Round the edges for a modern look */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280; /* Make it light up slightly when hovered */
+}
