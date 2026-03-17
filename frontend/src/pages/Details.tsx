@@ -49,7 +49,6 @@ const Details = () => {
       return {
         ...tmdbMedia,
         ...reduxMedia,
-        credits: reduxMedia.credits || tmdbMedia.credits,
         genres: reduxMedia.genres || tmdbMedia.genres,
       };
     }
@@ -62,7 +61,7 @@ const Details = () => {
 
   // API Gatekeeper Logic
   const isCustom = String(id).startsWith('custom-');
-  const hasFullData = Boolean(reduxMedia?.genres?.length && reduxMedia?.credits);
+  const hasFullData = Boolean(reduxMedia?.genres?.length);
   const hasLocalData = Boolean(reduxMedia);
 
   useEffect(() => {
@@ -73,10 +72,10 @@ const Details = () => {
       return;
     }
 
-    // 2. Otherwise, fetch missing details (like cast & crew) from TMDB
+    // 2. Otherwise, fetch missing details from TMDB
     let canceled = false;
     tmdbApi
-      .get<Media>(`/${type}/${id}?append_to_response=credits`)
+      .get<Media>(`/${type}/${id}`)
       .then((res) => {
         if (!canceled) setTmdbMedia(res.data);
       })
@@ -294,7 +293,6 @@ const Details = () => {
               </p>
             </div>
 
-            {/* border-text-muted/20 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-text-muted/20">
               {(media.budget ?? 0) > 0 && (
                 <div>
@@ -321,43 +319,6 @@ const Details = () => {
                 </div>
               )}
             </div>
-            
-            {media.credits?.cast && media.credits.cast.length > 0 && (
-              <div className="mt-16 pt-8 border-t border-text-muted/20 w-full">
-                <h3 className="text-2xl font-bold text-text-main mb-6">Top Cast</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-                  {media.credits.cast.slice(0, 10).map((actor) => (
-                    <div 
-                      key={actor.id} 
-                      className="bg-card-bg rounded-xl overflow-hidden shadow-lg shadow-main/50 border border-text-muted/20 flex flex-col transition-colors duration-300"
-                    >
-                      {actor.profile_path ? (
-                        <img 
-                          src={`https://image.tmdb.org/t/p/w276_and_h350_face${actor.profile_path}`} 
-                          alt={actor.name} 
-                          className="w-full h-48 md:h-56 object-cover bg-main"
-                        />
-                      ) : (
-                        <div className="w-full h-48 md:h-56 bg-main flex items-center justify-center text-text-muted/50">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-12 h-12">
-                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="p-3 flex-1 flex flex-col justify-center">
-                        <p className="text-text-main font-semibold text-sm truncate" title={actor.name}>
-                          {actor.name}
-                        </p>
-                        <p className="text-text-muted text-xs truncate mt-1" title={actor.character}>
-                          {actor.character}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
           </div>
         </div>
       </div>
