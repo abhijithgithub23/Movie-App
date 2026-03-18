@@ -21,7 +21,6 @@ const SignupPage = lazy(() => import("../pages/SignupPage"));
 
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 
-
 export default function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
@@ -34,15 +33,19 @@ export default function AppRoutes() {
         {/* --- Main App Routes --- */}
         <Route element={<MainLayout />}>
 
+          {/* Publicly accessible pages */}
+          <Route path="/" element={<Home />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/tv" element={<TVShows />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/details/:type/:id" element={<Details />} />
+
+          {/* User must be logged in to view Favorites */}
           <Route element={<ProtectedRoutes />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/movies" element={<Movies />} />
-            <Route path="/tv" element={<TVShows />} />
-            <Route path="/search" element={<Search />} />
             <Route path="/favorites" element={<Favorites />} />
-            <Route path="/details/:type/:id" element={<Details />} />
           </Route>
 
+          {/* User must be logged in AND an admin */}
           <Route element={<AdminRoutes />}>
             <Route path="/admin/add" element={<AddMedia />} />
             <Route path="/admin/edit/:type/:id" element={<EditMedia />} />

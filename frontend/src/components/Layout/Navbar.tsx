@@ -108,17 +108,28 @@ const Navbar = () => {
                 <Search size={22} strokeWidth={2.5} />
               </NavLink>
 
-              <NavLink
-                to="/favorites"
-                title={t("favorites")}
-                className={({ isActive }) =>
-                  `transition-colors duration-300 ${
-                    isActive ? "text-red-500" : "text-text-muted hover:text-red-500"
-                  }`
-                }
-              >
-                <Heart size={22} strokeWidth={2.5} />
-              </NavLink>
+              {/* Favorites - Conditionally trigger login if not authenticated */}
+              {isAuthenticated ? (
+                <NavLink
+                  to="/favorites"
+                  title={t("favorites")}
+                  className={({ isActive }) =>
+                    `transition-colors duration-300 ${
+                      isActive ? "text-red-500" : "text-text-muted hover:text-red-500"
+                    }`
+                  }
+                >
+                  <Heart size={22} strokeWidth={2.5} />
+                </NavLink>
+              ) : (
+                <button
+                  onClick={() => loginWithRedirect()}
+                  title={t("favorites")}
+                  className="text-text-muted hover:text-red-500 transition-colors duration-300"
+                >
+                  <Heart size={22} strokeWidth={2.5} />
+                </button>
+              )}
 
               {isAdmin && (
                 <NavLink
@@ -242,14 +253,28 @@ const Navbar = () => {
                 <span className="text-[10px] uppercase tracking-widest">{t("search")}</span>
               </NavLink>
 
-              <NavLink
-                to="/favorites"
-                className="flex flex-col items-center gap-1 text-text-muted"
-                onClick={() => setIsOpen(false)}
-              >
-                <Heart size={24} />
-                <span className="text-[10px] uppercase tracking-widest">{t("favorites")}</span>
-              </NavLink>
+              {/* Favorites Mobile - Conditionally trigger login if not authenticated */}
+              {isAuthenticated ? (
+                <NavLink
+                  to="/favorites"
+                  className="flex flex-col items-center gap-1 text-text-muted hover:text-red-500 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Heart size={24} />
+                  <span className="text-[10px] uppercase tracking-widest">{t("favorites")}</span>
+                </NavLink>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    loginWithRedirect();
+                  }}
+                  className="flex flex-col items-center gap-1 text-text-muted hover:text-red-500 transition-colors"
+                >
+                  <Heart size={24} />
+                  <span className="text-[10px] uppercase tracking-widest">{t("favorites")}</span>
+                </button>
+              )}
             </div>
 
             <div className="flex gap-4">
