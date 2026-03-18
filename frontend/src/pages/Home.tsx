@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, memo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+
 import { getTrending } from "../features/media/mediaSlice";
 import type { RootState, AppDispatch } from "../store/store";
 import MediaRow from "../components/Media/MediaRow";
@@ -34,6 +35,8 @@ const HeroSection = memo(({ trending }: { trending: MediaItem[] }) => {
   const [bgIndex, setBgIndex] = useState(0);
   const [textIndex, setTextIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
+
+  const { t } = useTranslation();
   
   const totalSlides = Math.min(trending.length, 10);
 
@@ -107,13 +110,13 @@ const HeroSection = memo(({ trending }: { trending: MediaItem[] }) => {
             <svg className="w-4 h-4 text-btn-text fill-current" viewBox="0 0 24 24">
               <path d="M6 4l15 8-15 8z" />
             </svg>
-            Play
+            {t("play")}
           </button>
           <button
             onClick={handleHeroClick}
             className="bg-card-bg/80 text-text-main border border-text-muted/30 px-6 py-3 rounded-lg font-semibold hover:bg-card-bg transition-colors backdrop-blur-sm"
           >
-            More Info
+            {t("moreInfo")}
           </button>
         </div>
       </div>
@@ -123,13 +126,14 @@ const HeroSection = memo(({ trending }: { trending: MediaItem[] }) => {
 
 // --- SUB-COMPONENT: CONTENT ROWS ---
 const ContentRows = memo(({ trending, movies, tv, highRated }: ContentRowsProps) => {
+  const { t } = useTranslation();
   return (
-    <div className="px-6 md:px-12 py-12 space-y-12 relative z-20">
-      <MediaRow title="Trending Now" media={trending} />
-      <MediaRow title="Popular Movies" media={movies} />
-      <MediaRow title="Popular TV Shows" media={tv} />
-      <MediaRow title="Top Rated" media={highRated} />
-    </div>
+      <div className="px-6 md:px-12 py-12 space-y-12 relative z-20">
+        <MediaRow title={t("trendingNow")} media={trending} />
+        <MediaRow title={t("popularMovies")} media={movies} />
+        <MediaRow title={t("popularTvShows")} media={tv} />
+        <MediaRow title={t("topRated")} media={highRated} />
+      </div>
   );
 });
 

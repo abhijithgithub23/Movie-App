@@ -18,7 +18,9 @@ const ProfilePage = () => {
       <div className="min-h-screen flex items-center justify-center text-text-main bg-body-bg">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-text-main/20 border-t-text-main rounded-full animate-spin"></div>
-          <p className="font-semibold text-text-muted tracking-widest uppercase text-sm">Loading...</p>
+          <p className="font-semibold text-text-muted tracking-widest uppercase text-sm">
+            Loading...
+          </p>
         </div>
       </div>
     );
@@ -27,7 +29,9 @@ const ProfilePage = () => {
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-text-main bg-body-bg">
-        <p className="text-xl font-medium text-text-muted">Please log in to view your profile.</p>
+        <p className="text-xl font-medium text-text-muted">
+          Please log in to view your profile.
+        </p>
       </div>
     );
   }
@@ -41,7 +45,7 @@ const ProfilePage = () => {
           
           <div className="flex items-center justify-between border-b border-text-muted/20 pb-6 mb-8">
             <h1 className="text-3xl font-bold text-text-main tracking-tight">
-              {t("profile") || "Account Profile"}
+              {t("profile")}
             </h1>
           </div>
 
@@ -51,7 +55,6 @@ const ProfilePage = () => {
             <div className="relative group">
               <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-text-main/10 shadow-xl bg-text-main/5 flex items-center justify-center text-text-main">
                 
-                {/* Default Avatar for Profile Page */}
                 <img
                   src={user?.picture || DEFAULT_AVATAR}
                   alt="Profile"
@@ -64,7 +67,7 @@ const ProfilePage = () => {
 
               </div>
               
-              {/* Admin Badge Wrapper */}
+              {/* Admin Badge */}
               {isAdmin && (
                 <div 
                   className="absolute bottom-1 right-1 bg-green-500 p-2.5 rounded-full shadow-lg border-4 border-body-bg" 
@@ -75,17 +78,20 @@ const ProfilePage = () => {
               )}
             </div>
 
-            {/* User Details Section */}
+            {/* User Details */}
             <div className="flex-1 space-y-6 text-center md:text-left w-full">
               <div>
-                <h2 className="text-3xl font-extrabold text-text-main mb-2">{user.name}</h2>
+                <h2 className="text-3xl font-extrabold text-text-main mb-2">
+                  {user.name}
+                </h2>
+
                 {isAdmin ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-500 text-xs font-bold uppercase tracking-wider rounded-md border border-green-500/20">
-                    <Shield size={14} /> Administrator
+                    <Shield size={14} /> {t("administrator")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 text-blue-500 text-xs font-bold uppercase tracking-wider rounded-md border border-blue-500/20">
-                    <UserIcon size={14} /> Standard User
+                    <UserIcon size={14} /> {t("standardUser")}
                   </span>
                 )}
               </div>
@@ -93,7 +99,9 @@ const ProfilePage = () => {
               <div className="space-y-4 pt-4 border-t border-text-muted/10 w-full">
                 <div className="flex items-center justify-center md:justify-start gap-4 text-text-muted bg-text-main/5 p-3 rounded-xl border border-text-main/5">
                   <Mail size={20} className="text-text-main/60" />
-                  <span className="text-[15px] font-medium truncate">{user.email}</span>
+                  <span className="text-[15px] font-medium truncate">
+                    {user.email}
+                  </span>
                 </div>
                 
                 <div className="flex items-center justify-center md:justify-start gap-4 text-text-muted bg-text-main/5 p-3 rounded-xl border border-text-main/5">
@@ -114,13 +122,13 @@ const ProfilePage = () => {
               </div>
 
               <div className="pt-6 border-t border-text-muted/10 flex justify-center md:justify-start">
-                  <button
-                      onClick={() => setShowLogoutConfirm(true)}
-                      className="flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 px-6 py-3 rounded-xl font-semibold transition-colors w-full md:w-auto"
-                  >
-                      <LogOut size={18} />
-                      {t("logout") || "Logout"}
-                  </button>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 px-6 py-3 rounded-xl font-semibold transition-colors w-full md:w-auto"
+                >
+                  <LogOut size={18} />
+                  {t("logout")}
+                </button>
               </div>
               
             </div>
@@ -128,7 +136,6 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Render the modal at the bottom level */}
       <LogoutModal 
         isOpen={showLogoutConfirm} 
         onClose={() => setShowLogoutConfirm(false)} 

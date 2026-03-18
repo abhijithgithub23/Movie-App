@@ -8,22 +8,43 @@
   "logout": "लॉगआउट",
   "addMedia": "मीडिया जोड़ें",
 
+  "profile": "प्रोफ़ाइल",
+  "administrator": "प्रशासक",
+  "play": "चलाएं",
+  "moreInfo": "और जानकारी",
+  "standardUser": "सामान्य उपयोगकर्ता",
+  "myFavorites": "मेरे पसंदीदा",
+  "titleSaved": "शीर्षक सहेजा गया",
+  "readyToLeave": "क्या आप बाहर जाना चाहते हैं?",
+  "logoutConfirm": "क्या आप वाकई अपने Cinevia खाते से लॉगआउट करना चाहते हैं?",
+  "cancel": "रद्द करें",
+  "logOut": "लॉगआउट",
+  "watchTrailer": "ट्रेलर देखें",
+  "details": "विवरण",
+  "country": "देश",
+  "popularityRank": "लोकप्रियता रैंक",
+    "trendingNow": "ट्रेंडिंग",
+  "popularMovies": "लोकप्रिय फिल्में",
+  "popularTvShows": "लोकप्रिय टीवी शो",
+  "discoverMovies": "फिल्में खोजें",
+  "discoverTvShows": "टीवी शो खोजें",
+
   "brand": "CINEVIA",
-  "description": "फिल्मों, टीवी शो और मनोरंजन के लिए आपका अंतिम गंतव्य। कहीं भी, कभी भी अपने पसंदीदा कंटेंट का आनंद लें।",
+  "description": "फिल्मों, टीवी शो और मनोरंजन के लिए आपका अंतिम गंतव्य। अपने पसंदीदा कंटेंट को कभी भी, कहीं भी देखें।",
   "social": {
-    "facebook": "फेसबुक",
-    "twitter": "ट्विटर",
-    "instagram": "इंस्टाग्राम",
-    "youtube": "यूट्यूब"
+    "facebook": "Facebook",
+    "twitter": "Twitter",
+    "instagram": "Instagram",
+    "youtube": "YouTube"
   },
   "links": {
-    "explore": "एक्सप्लोर करें",
+    "explore": "खोजें",
     "home": "होम",
     "movies": "फिल्में",
     "tvShows": "टीवी शो",
     "favorites": "पसंदीदा",
     "support": "सहायता",
-    "helpCenter": "हेल्प सेंटर",
+    "helpCenter": "सहायता केंद्र",
     "contactUs": "संपर्क करें",
     "devices": "डिवाइस",
     "account": "खाता",
@@ -34,7 +55,7 @@
     "corporateInfo": "कॉर्पोरेट जानकारी"
   },
   "footerBottom": {
-    "rights": "सर्वाधिकार सुरक्षित।",
+    "rights": "सभी अधिकार सुरक्षित।",
     "madeWith": "React और Tailwind के साथ बनाया गया"
   }
 }

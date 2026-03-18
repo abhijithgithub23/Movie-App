@@ -26,6 +26,7 @@ interface MovieData {
 const Movies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const rawMovies = useSelector((state: RootState) => state.media.movies);
   const status = useSelector((state: RootState) => state.media.status.movies);
@@ -94,7 +95,7 @@ const Movies = () => {
 
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
         <MediaRow 
-           title="Discover Movies" 
+          title={t("discoverMovies")}
            media={movies} 
            onLoadMore={handleLoadMore} 
         />

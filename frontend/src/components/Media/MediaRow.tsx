@@ -2,6 +2,7 @@ import { useRef, useEffect, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Media } from "../../types";
 
+
 interface MediaRowProps {
   title: string;
   media: Media[];
@@ -46,6 +47,7 @@ const MediaRow = ({ title, media, onLoadMore }: MediaRowProps) => {
     const type = item.media_type || (item.title ? "movie" : "tv");
     navigate(`/details/${type}/${item.id}`);
   };
+  
 
   useEffect(() => {
     if (!rowRef.current || !observerTarget.current) return;

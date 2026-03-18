@@ -15,6 +15,7 @@ const Favorites = lazy(() => import("../pages/Favorites"));
 const AddMedia = lazy(() => import("../pages/AddMedia"));
 const EditMedia = lazy(() => import("../pages/EditMedia"));
 const NotFound = lazy(() => import("../pages/NotFound"));
+const ProfilePage = lazy(() => import("../pages/ProfilePage"));
 
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const SignupPage = lazy(() => import("../pages/SignupPage"));
@@ -43,6 +44,7 @@ export default function AppRoutes() {
           {/* User must be logged in to view Favorites */}
           <Route element={<ProtectedRoutes />}>
             <Route path="/favorites" element={<Favorites />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
           {/* User must be logged in AND an admin */}

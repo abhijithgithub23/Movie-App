@@ -13,6 +13,7 @@ let lastFetchedTvLang = "";
 const TVShows = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const rawShows = useSelector((state: RootState) => state.media.tvShows);
   const status = useSelector((state: RootState) => state.media.status.tvShows);
@@ -81,7 +82,7 @@ const TVShows = () => {
 
       <div className="px-6 md:px-12 py-12 space-y-12 relative z-30 -mt-10">
         <MediaRow 
-          title="Discover TV Shows" 
+          title={t("discoverTvShows")}
           media={shows} 
           onLoadMore={handleLoadMore} 
         />

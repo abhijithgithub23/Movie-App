@@ -1,5 +1,6 @@
 import { LogOut } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useTranslation } from "react-i18next";
 
 interface LogoutModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface LogoutModalProps {
 
 const LogoutModal = ({ isOpen, onClose }: LogoutModalProps) => {
   const { logout } = useAuth0();
+  const { t } = useTranslation();
 
   if (!isOpen) return null;
 
@@ -17,24 +19,30 @@ const LogoutModal = ({ isOpen, onClose }: LogoutModalProps) => {
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-5">
           <LogOut size={32} className="text-red-500" />
         </div>
+
         <h3 className="text-2xl font-bold text-text-main mb-2">
-          Ready to leave?
+          {t("readyToLeave")}
         </h3>
+
         <p className="text-text-muted mb-8 text-sm">
-          Are you sure you want to log out of your Cinevia account?
+          {t("logoutConfirm")}
         </p>
+
         <div className="flex gap-3 w-full">
           <button
             onClick={onClose}
             className="flex-1 py-3 px-4 bg-text-muted/20 hover:bg-text-muted/30 text-text-main rounded-xl font-medium transition-colors"
           >
-            Cancel
+            {t("cancel")}
           </button>
+
           <button
-            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+            onClick={() =>
+              logout({ logoutParams: { returnTo: window.location.origin } })
+            }
             className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition-colors shadow-lg shadow-red-600/20"
           >
-            Log Out
+            {t("logOut")}
           </button>
         </div>
       </div>

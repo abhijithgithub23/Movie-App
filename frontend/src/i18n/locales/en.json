@@ -8,6 +8,27 @@
   "logout": "Logout",
   "addMedia": "Add Media",
 
+  "profile": "Profile",
+  "administrator": "Administrator",
+  "play": "Play",
+  "moreInfo": "More Info",
+  "standardUser": "Standard User",
+  "myFavorites": "My Favorites",
+  "titleSaved": "Title saved",
+  "readyToLeave": "Ready to leave?",
+  "logoutConfirm": "Are you sure you want to log out of your Cinevia account?",
+  "cancel": "Cancel",
+  "logOut": "Log Out",
+  "watchTrailer": "Watch Trailer",
+  "details": "Details",
+  "country": "Country",
+  "popularityRank": "Popularity Rank",
+    "trendingNow": "Trending Now",
+  "popularMovies": "Popular Movies",
+  "popularTvShows": "Popular TV Shows",
+  "discoverMovies": "Discover Movies",
+  "discoverTvShows": "Discover TV Shows",
+
   "brand": "CINEVIA",
   "description": "Your ultimate destination for movies, TV shows, and entertainment. Stream your favorite content anywhere, anytime.",
   "social": {
@@ -37,4 +58,5 @@
     "rights": "All rights reserved.",
     "madeWith": "Made with React & Tailwind"
   }
+  
 }

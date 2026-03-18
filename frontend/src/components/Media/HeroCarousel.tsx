@@ -1,5 +1,6 @@
 import { useState, useEffect , memo} from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export interface HeroMediaItem {
   id: string | number;
@@ -21,6 +22,8 @@ interface HeroCarouselProps {
 }
 
 const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
+  const { t } = useTranslation();
+
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
   const totalSlides = items.length;
@@ -38,6 +41,9 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
   };
 
   if (!items.length) return null;
+
+  
+  
 
   return (
     <div className="relative h-[80vh] w-full overflow-hidden flex items-center bg-main">
@@ -94,13 +100,14 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                       <path d="M6 4l15 8-15 8z" />
                     </svg>
-                    Watch Trailer
+                    {t("watchTrailer")}
                   </button>
+
                   <button
                     onClick={() => handleHeroClick(item.id)}
                     className="bg-card-bg/60 text-text-main font-semibold px-8 py-3 rounded-full hover:bg-card-bg transition-all duration-300 backdrop-blur-md border border-text-muted/30"
                   >
-                    Details
+                    {t("details")}
                   </button>
                 </div>
               </div>
