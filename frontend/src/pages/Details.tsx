@@ -43,7 +43,7 @@ const Details = () => {
            tvShows.find((m) => String(m.id) === id);
   }, [id, editedMedia, customMovies, favorites, trending, movies, tvShows]);
 
-  // Merge TMDB data and Local data (Local data ALWAYS wins)
+  // Merge DB data and Local data (Local data ALWAYS wins)
   const media: Media | null = useMemo(() => {
     if (reduxMedia && tmdbMedia) {
       return {
@@ -67,20 +67,21 @@ const Details = () => {
   useEffect(() => {
     if (!id || !type) return;
     
-    // 1. Skip TMDB fetch entirely if it's a custom item OR if we already have the complete details cached
+    // 1. Skip fetch entirely if it's a custom item OR if we already have the complete details cached
     if (isCustom || hasFullData) {
       return;
     }
 
-    // 2. Otherwise, fetch missing details from TMDB
+    // 2. Otherwise, fetch missing details from our Postgres Backend
     let canceled = false;
     tmdbApi
-      .get<Media>(`/${type}/${id}`)
+      // UPDATED PATH: Added /media so it hits http://localhost:5000/api/media/:type/:id
+      .get<Media>(`/media/${type}/${id}`)
       .then((res) => {
         if (!canceled) setTmdbMedia(res.data);
       })
       .catch(() => {
-        // 3. Only navigate away if TMDB fails AND we have absolutely no local data to show
+        // 3. Only navigate away if backend fails AND we have absolutely no local data to show
         if (!canceled && !hasLocalData) {
           navigate('/');
         }
@@ -242,7 +243,8 @@ const Details = () => {
               {media.vote_average !== undefined && media.vote_average > 0 && (
                 <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-3 py-1 rounded-full backdrop-blur-sm">
                   <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  {media.vote_average.toFixed(1)} <span className="text-yellow-500/50 text-xs ml-1">({media.vote_count})</span>
+                  {/* FIX: Cast vote_average to Number before formatting */}
+                  {Number(media.vote_average).toFixed(1)} <span className="text-yellow-500/50 text-xs ml-1">({media.vote_count})</span>
                 </div>
               )}
               
@@ -315,7 +317,8 @@ const Details = () => {
               {media.popularity && (
                 <div>
                   <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Popularity Rank</h4>
-                  <p className="text-text-main font-semibold">{media.popularity.toFixed(0)}</p>
+                  {/* FIX: Cast popularity to Number before formatting */}
+                  <p className="text-text-main font-semibold">{Number(media.popularity).toFixed(0)}</p>
                 </div>
               )}
             </div>
