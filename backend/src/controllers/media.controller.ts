@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { fetchTrendingMedia, fetchMovies, fetchTvShows, fetchMediaDetails } from '../services/media.service';
+import { fetchTrendingMedia, fetchMovies, fetchTvShows, fetchMediaDetails, searchMedia } from '../services/media.service';
 
 export const getTrending = async (req: Request, res: Response) => {
   try {
@@ -63,3 +63,22 @@ export const getMediaDetails = async (
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+
+export const searchMediaController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const searchQuery = req.query.query as string;
+    
+    if (!searchQuery) {
+      res.status(400).json({ message: 'Search query is required' });
+      return;
+    }
+
+    const data = await searchMedia(searchQuery);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error('Error searching media:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+

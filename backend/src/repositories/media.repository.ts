@@ -43,3 +43,27 @@ export const getMediaDetailsDB = async (type: string, internalId: number) => {
   
   return rows[0]; 
 };
+
+
+
+// Fetch media by title search
+export const searchMediaDB = async (searchTerm: string) => {
+  // We use ILIKE for case-insensitive matching.
+  // We also aggregate the genre_ids so your frontend filters keep working!
+  const query = `
+    SELECT 
+      m.*, 
+      m.tmdb_id AS id,
+      COALESCE(json_agg(mg.genre_id) FILTER (WHERE mg.genre_id IS NOT NULL), '[]') AS genre_ids
+    FROM media m
+    LEFT JOIN media_genres mg ON m.tmdb_id = mg.media_tmdb_id
+    WHERE m.title ILIKE $1
+    GROUP BY m.id
+    ORDER BY m.vote_average DESC NULLS LAST
+    LIMIT 20;
+  `;
+  
+  // Wrap the search term in % wildcards
+  const { rows } = await pool.query(query, [`%${searchTerm}%`]);
+  return rows;
+};

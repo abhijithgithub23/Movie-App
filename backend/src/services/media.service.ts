@@ -1,4 +1,4 @@
-import { getTrendingMediaDB, getMediaByTypeDB, getMediaDetailsDB } from '../repositories/media.repository';
+import { getTrendingMediaDB, getMediaByTypeDB, getMediaDetailsDB, searchMediaDB } from '../repositories/media.repository';
 
 export const fetchTrendingMedia = async () => {
   const trending = await getTrendingMediaDB();
@@ -21,4 +21,9 @@ export const fetchTvShows = async (page: number = 1) => {
 export const fetchMediaDetails = async (type: string, tmdbId: number) => {
   const details = await getMediaDetailsDB(type, tmdbId);
   return details;
+};
+
+export const searchMedia = async (query: string) => {
+  const results = await searchMediaDB(query);
+  return { results }; 
 };

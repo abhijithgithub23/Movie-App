@@ -58,6 +58,7 @@ const Search = () => {
   }, []); 
 
   const handleSearchSubmit = useCallback((newQuery: string) => {
+    // This now hits your PostgreSQL database via the backend route!
     dispatch(searchMediaThunk(newQuery));
     setHasSearched(true);
     setCommittedQuery(newQuery);
@@ -76,9 +77,9 @@ const Search = () => {
   const filteredResults = useMemo(() => {
     let results = searchResults.filter((m) => m.media_type === "movie" || m.media_type === "tv");
     if (filters.mediaType !== 'all') results = results.filter((m) => m.media_type === filters.mediaType);
-    if (filters.genre) results = results.filter((m) => m.genre_ids?.includes(filters.genre!));
+    if (filters.genre) results = results.filter((m) => m.genre_ids && m.genre_ids.includes(filters.genre!));
     if (filters.rating > 0) results = results.filter((m) => (m.vote_average || 0) >= filters.rating);
-    if (filters.year !== 'all') results = results.filter((m) => (m.release_date || m.first_air_date)?.startsWith(filters.year));
+    if (filters.year !== 'all') results = results.filter((m) => (m.release_date || m.first_air_date || '').startsWith(filters.year));
     if (filters.language !== 'all') results = results.filter((m) => m.original_language === filters.language);
 
     return results.sort((a, b) => {
