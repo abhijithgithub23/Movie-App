@@ -10,6 +10,42 @@ import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 import { useTheme } from '../context/ThemeContext'; 
 
+// --- NEW PROPER TYPESCRIPT INTERFACES ---
+interface CastMember {
+  id: number;
+  name: string;
+}
+
+interface CrewMember {
+  id: number;
+  name: string;
+  job: string;
+}
+
+interface ProductionCompany {
+  id: number;
+  name: string;
+}
+
+interface Creator {
+  id: number;
+  name: string;
+}
+
+// We extend your base Media type to include the deep data from PostgreSQL
+interface ExtendedMedia extends Media {
+  type?: 'movie' | 'tv'; // <-- ADDED THIS LINE
+  credits?: {
+    cast?: CastMember[];
+    crew?: CrewMember[];
+  };
+  created_by?: Creator[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  production_companies?: ProductionCompany[];
+}
+// ----------------------------------------
+
 const Details = () => {
   const { id: paramId, type: paramType } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
@@ -75,7 +111,6 @@ const Details = () => {
     // 2. Otherwise, fetch missing details from our Postgres Backend
     let canceled = false;
     tmdbApi
-      // UPDATED PATH: Added /media so it hits http://localhost:5000/api/media/:type/:id
       .get<Media>(`/media/${type}/${id}`)
       .then((res) => {
         if (!canceled) setTmdbMedia(res.data);
@@ -155,6 +190,12 @@ const Details = () => {
     dispatch(toggleFavorite(media));
   };
 
+  // EXTRACTING DEEP DATA TYPE-SAFELY
+  const mediaData = media as ExtendedMedia;
+  const topCast = mediaData.credits?.cast?.slice(0, 10) || [];
+  const director = mediaData.credits?.crew?.find((c) => c.job === 'Director')?.name;
+  const creators = mediaData.created_by?.map((c) => c.name).join(', ');
+
   return (
     <>
       <div className="bg-main min-h-screen text-text-main pb-20 -mt-20 md:-mt-24 transition-colors duration-300">
@@ -196,7 +237,6 @@ const Details = () => {
                   viewBox="0 0 24 24" 
                   strokeWidth="1.5" 
                   stroke="currentColor" 
-                  // Text color for favorite icon
                   className={`w-10 h-10 transition-colors ${isFavorited ? 'text-btn-bg' : 'text-text-main'}`}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
@@ -243,7 +283,6 @@ const Details = () => {
               {media.vote_average !== undefined && media.vote_average > 0 && (
                 <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-3 py-1 rounded-full backdrop-blur-sm">
                   <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  {/* FIX: Cast vote_average to Number before formatting */}
                   {Number(media.vote_average).toFixed(1)} <span className="text-yellow-500/50 text-xs ml-1">({media.vote_count})</span>
                 </div>
               )}
@@ -295,33 +334,91 @@ const Details = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-text-muted/20">
-              {(media.budget ?? 0) > 0 && (
-                <div>
-                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Budget</h4>
-                  <p className="text-text-main font-semibold">{formatCurrency(media.budget)}</p>
+            {/* Top Cast Grid */}
+            {topCast.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-xl font-bold text-text-main mb-4">Top Cast</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  {topCast.map((actor) => (
+                    <div key={actor.id} className="bg-card-bg/50 border border-text-muted/10 p-3 rounded-xl text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
+                      <p className="text-text-main font-semibold text-sm line-clamp-2">{actor.name}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
-              {(media.revenue ?? 0) > 0 && (
+              </div>
+            )}
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 pt-8 border-t border-text-muted/20">
+              
+              {/* Conditional Director or Creator */}
+              {director ? (
                 <div>
-                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Revenue</h4>
-                  <p className="text-text-main font-semibold">{formatCurrency(media.revenue)}</p>
+                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Director</h4>
+                  <p className="text-text-main font-semibold">{director}</p>
                 </div>
-              )}
-              {media.origin_country && media.origin_country.length > 0 && (
+              ) : creators ? (
                 <div>
-                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Country</h4>
-                  <p className="text-text-main font-semibold">{media.origin_country.join(', ')}</p>
+                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Creator</h4>
+                  <p className="text-text-main font-semibold">{creators}</p>
                 </div>
+              ) : null}
+
+              {/* Conditional Budget/Revenue vs Seasons/Episodes */}
+              {mediaData.type === 'tv' || mediaData.number_of_seasons ? (
+                <>
+                  {(mediaData.number_of_seasons ?? 0) > 0 && (
+                    <div>
+                      <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Seasons</h4>
+                      <p className="text-text-main font-semibold">{mediaData.number_of_seasons}</p>
+                    </div>
+                  )}
+                  {(mediaData.number_of_episodes ?? 0) > 0 && (
+                    <div>
+                      <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Episodes</h4>
+                      <p className="text-text-main font-semibold">{mediaData.number_of_episodes}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {(media.budget ?? 0) > 0 && (
+                    <div>
+                      <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Budget</h4>
+                      <p className="text-text-main font-semibold">{formatCurrency(media.budget)}</p>
+                    </div>
+                  )}
+                  {(media.revenue ?? 0) > 0 && (
+                    <div>
+                      <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Revenue</h4>
+                      <p className="text-text-main font-semibold">{formatCurrency(media.revenue)}</p>
+                    </div>
+                  )}
+                </>
               )}
+              
               {media.popularity && (
                 <div>
-                  <h4 className="text-text-muted text-sm font-medium uppercase tracking-wider mb-1">Popularity Rank</h4>
-                  {/* FIX: Cast popularity to Number before formatting */}
+                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Popularity</h4>
                   <p className="text-text-main font-semibold">{Number(media.popularity).toFixed(0)}</p>
                 </div>
               )}
             </div>
+
+            {/* Production Companies */}
+            {mediaData.production_companies && mediaData.production_companies.length > 0 && (
+              <div className="pt-8 mt-8 border-t border-text-muted/20">
+                <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Production Companies</h4>
+                <div className="flex flex-wrap gap-2">
+                  {mediaData.production_companies.map((company) => (
+                    <span key={company.id} className="text-text-main text-xs bg-text-muted/10 border border-text-muted/20 px-3 py-1.5 rounded-md">
+                      {company.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
           </div>
         </div>
       </div>
