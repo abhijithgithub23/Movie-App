@@ -1,8 +1,18 @@
 import pool from '../config/db';
 
 export const getTrendingMediaDB = async () => {
+  // OPTIMIZED: Only fetching the exact columns needed for Home/Hero/MediaRow
   const query = `
-    SELECT * FROM media 
+    SELECT 
+      tmdb_id AS id, 
+      type AS media_type, 
+      title, 
+      original_name AS name, 
+      backdrop_path, 
+      poster_path, 
+      overview, 
+      vote_average 
+    FROM media 
     ORDER BY vote_average DESC NULLS LAST 
     LIMIT 20;
   `;
@@ -10,60 +20,56 @@ export const getTrendingMediaDB = async () => {
   return rows;
 };
 
-// Fetch media by type with pagination
 export const getMediaByTypeDB = async (type: 'movie' | 'tv', page: number, limit: number) => {
   const offset = (page - 1) * limit;
   
+  // OPTIMIZED: The Movies/TV pages also just need basic card info
   const query = `
-    SELECT * FROM media 
-    WHERE media_type = $1 
+    SELECT 
+      tmdb_id AS id, 
+      type AS media_type, 
+      title, 
+      original_name AS name, 
+      backdrop_path, 
+      poster_path, 
+      overview, 
+      vote_average 
+    FROM media 
+    WHERE type = $1 
     ORDER BY vote_average DESC NULLS LAST 
     LIMIT $2 OFFSET $3;
   `;
-  
-  // Using $1, $2, $3 prevents SQL injection
   const { rows } = await pool.query(query, [type, limit, offset]);
   return rows;
 };
 
-// Fetch full details for a specific movie or TV show
-export const getMediaDetailsDB = async (type: string, internalId: number) => {
-  // This query perfectly matches your logic:
-  // It finds the tmdb_id from the 'media' table using the internal ID,
-  // then uses that to grab the correct row from 'media_details'
+
+export const getMediaDetailsDB = async (type: string, tmdbId: number) => {
+  // Direct lookup! No more messy subqueries!
   const query = `
-    SELECT * FROM media_details 
-    WHERE tmdb_id = (
-      SELECT tmdb_id FROM media WHERE id = $1 AND media_type = $2
-    )
-    AND type = $2;
+    SELECT *, tmdb_id AS id, type AS media_type 
+    FROM media 
+    WHERE tmdb_id = $1 AND type = $2;
   `;
-  
-  const { rows } = await pool.query(query, [internalId, type]);
-  
+  const { rows } = await pool.query(query, [tmdbId, type]);
   return rows[0]; 
 };
 
-
-
-// Fetch media by title search
 export const searchMediaDB = async (searchTerm: string) => {
-  // We use ILIKE for case-insensitive matching.
-  // We also aggregate the genre_ids so your frontend filters keep working!
   const query = `
     SELECT 
       m.*, 
       m.tmdb_id AS id,
+      m.type AS media_type,
       COALESCE(json_agg(mg.genre_id) FILTER (WHERE mg.genre_id IS NOT NULL), '[]') AS genre_ids
     FROM media m
     LEFT JOIN media_genres mg ON m.tmdb_id = mg.media_tmdb_id
-    WHERE m.title ILIKE $1
+    WHERE m.title ILIKE $1 OR m.original_name ILIKE $1
     GROUP BY m.id
     ORDER BY m.vote_average DESC NULLS LAST
     LIMIT 20;
   `;
   
-  // Wrap the search term in % wildcards
   const { rows } = await pool.query(query, [`%${searchTerm}%`]);
   return rows;
 };

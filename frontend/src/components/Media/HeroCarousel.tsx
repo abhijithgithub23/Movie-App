@@ -80,7 +80,7 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
 
                 <div className="flex items-center gap-4 mb-6 text-sm text-text-muted font-medium drop-shadow-md">
                   <span className="flex items-center gap-1 text-yellow-400">
-                    ★ {item.vote_average?.toFixed(1) || "N/A"}
+                    ★ {item.vote_average ? Number(item.vote_average).toFixed(1) : 'N/A'}
                   </span>
                   <span>•</span>
                   <span>
