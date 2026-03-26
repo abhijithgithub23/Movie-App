@@ -58,7 +58,7 @@
 
 
 
-//BACKEND
+//BACKEND-------------------------------------------------------------------------------------------------------------------------------
 
 // tmdb.ts
 import axios from "axios";
@@ -73,13 +73,10 @@ export const tmdbApi = axios.create({
   },
 });
 
-// Helper functions now match your backend routes
+// trending
 export const fetchTrending = () => tmdbApi.get("/media/trending");
 
-// You will need to build the backend routes for these next!
-// export const searchMedia = (query: string) => tmdbApi.get("/media/search", { params: { query } });
-// export const fetchDetails = (type: "movie" | "tv", id: number | string) => tmdbApi.get(`/media/${type}/${id}`);
 
-// Previously: tmdbApi.get(`/${type}/${id}`)
+//detail
 export const fetchDetails = (type: "movie" | "tv", id: number | string) =>
   tmdbApi.get(`/media/${type}/${id}`);

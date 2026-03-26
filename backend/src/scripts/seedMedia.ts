@@ -27,7 +27,7 @@
 //   }
 // }
 
-// // NEW FUNCTION: Fetches and inserts all TMDB genres first
+// // NEW FUNCTION: Fetches and ---------------------------------------- inserts all TMDB genres first --------------------------------------------------------------------
 // async function seedGenres() {
 //   console.log("Seeding genres from TMDB...");
 
@@ -49,6 +49,8 @@
 //   console.log("Genres seeded successfully");
 // }
 
+
+// ----------------------------------------------------------------------to insert movis to media table--------------------------------------------------------------------
 // async function seedMovies() {
 //   console.log("Seeding movies...");
 
@@ -95,6 +97,7 @@
 //   console.log("Movies seeded successfully");
 // }
 
+// -----------------------------------------------------------to insert tvshow to media table---------------------------------------------------------------------------
 // async function seedTV() {
 //   console.log("Seeding TV shows...");
 
@@ -157,7 +160,7 @@
 // runSeeder();
 
 
-// FETACH DETAILS--------------------------------------------------------------------------------
+// ------------------------------------------FETACH DETAILS and add to media_detail table --------------------------------------------------------------------------------
 
 // import axios from "axios";
 // import dotenv from "dotenv";

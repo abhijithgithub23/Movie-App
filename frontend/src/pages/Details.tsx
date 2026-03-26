@@ -10,31 +10,66 @@ import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 import { useTheme } from '../context/ThemeContext'; 
 
-// --- NEW PROPER TYPESCRIPT INTERFACES ---
+// --- TYPESCRIPT INTERFACES ---
 interface CastMember {
   id: number;
   name: string;
+  character?: string;
+  profile_path?: string | null;
 }
 
 interface CrewMember {
   id: number;
   name: string;
   job: string;
+  department?: string;
+  profile_path?: string | null;
 }
 
 interface ProductionCompany {
   id: number;
   name: string;
+  logo_path?: string | null;
+}
+
+interface ProductionCountry {
+  iso_3166_1: string;
+  name: string;
+}
+
+interface SpokenLanguage {
+  iso_639_1: string;
+  name: string;
+  english_name: string;
 }
 
 interface Creator {
   id: number;
   name: string;
+  profile_path?: string | null;
 }
 
-// We extend your base Media type to include the deep data from PostgreSQL
+interface Season {
+  id: number;
+  name: string;
+  air_date: string;
+  overview: string;
+  poster_path: string | null;
+  vote_average: number;
+  episode_count: number;
+  season_number: number;
+}
+
+interface Network {
+  id: number;
+  name: string;
+  logo_path: string | null;
+  origin_country: string;
+}
+
+// Extended media type to include the deep data from PostgreSQL/TMDB
 interface ExtendedMedia extends Media {
-  type?: 'movie' | 'tv'; // <-- ADDED THIS LINE
+  type?: 'movie' | 'tv';
   credits?: {
     cast?: CastMember[];
     crew?: CrewMember[];
@@ -43,6 +78,16 @@ interface ExtendedMedia extends Media {
   number_of_seasons?: number;
   number_of_episodes?: number;
   production_companies?: ProductionCompany[];
+  production_countries?: ProductionCountry[];
+  spoken_languages?: SpokenLanguage[];
+  seasons?: Season[];
+  networks?: Network[];
+  homepage?: string;
+  imdb_id?: string;
+  budget?: number;
+  revenue?: number;
+  first_air_date?: string;
+  last_air_date?: string;
 }
 // ----------------------------------------
 
@@ -103,12 +148,10 @@ const Details = () => {
   useEffect(() => {
     if (!id || !type) return;
     
-    // 1. Skip fetch entirely if it's a custom item OR if we already have the complete details cached
     if (isCustom || hasFullData) {
       return;
     }
 
-    // 2. Otherwise, fetch missing details from our Postgres Backend
     let canceled = false;
     tmdbApi
       .get<Media>(`/media/${type}/${id}`)
@@ -116,7 +159,6 @@ const Details = () => {
         if (!canceled) setTmdbMedia(res.data);
       })
       .catch(() => {
-        // 3. Only navigate away if backend fails AND we have absolutely no local data to show
         if (!canceled && !hasLocalData) {
           navigate('/');
         }
@@ -136,22 +178,18 @@ const Details = () => {
     );
   }
 
-  // --- IMAGE URL LOGIC FIX ---
+  // --- HELPER FUNCTIONS ---
   const isValidAbsoluteUrl = (path: string) => 
     path.startsWith('http') || path.startsWith('data:image/') || path.startsWith('blob:');
 
-  const posterUrl = media.poster_path
-    ? isValidAbsoluteUrl(media.poster_path)
-      ? media.poster_path
-      : `https://image.tmdb.org/t/p/w500${media.poster_path}`
-    : '/placeholder.jpg';
+  const getImageUrl = (path?: string | null, size: string = 'w500', isProfile: boolean = false) => {
+    if (!path) return isProfile ? `https://ui-avatars.com/api/?name=N+A&background=random` : '/placeholder.jpg';
+    if (isValidAbsoluteUrl(path)) return path;
+    return `https://image.tmdb.org/t/p/${size}${path}`;
+  };
 
-  const backdropUrl = media.backdrop_path
-    ? isValidAbsoluteUrl(media.backdrop_path)
-      ? media.backdrop_path
-      : `https://image.tmdb.org/t/p/original${media.backdrop_path}`
-    : null;
-  // ---------------------------
+  const posterUrl = getImageUrl(media.poster_path, 'w500');
+  const backdropUrl = getImageUrl(media.backdrop_path, 'original');
 
   const formatCurrency = (amount?: number) => {
     if (!amount) return 'N/A';
@@ -165,20 +203,24 @@ const Details = () => {
     return `${h > 0 ? h + 'h ' : ''}${m}m`;
   };
 
+  const getReleaseYearString = (media: ExtendedMedia) => {
+    if (media.type === 'tv' || media.first_air_date) {
+        const start = media.first_air_date?.substring(0, 4) || '';
+        const end = media.status === 'Ended' && media.last_air_date 
+            ? media.last_air_date.substring(0, 4) 
+            : '';
+        return start && end && start !== end ? `${start} - ${end}` : start || 'TBA';
+    }
+    return media.release_date?.substring(0, 4) || 'TBA';
+  };
+
   const confirmDelete = () => {
     if (media.id) {
       try {
         dispatch(deleteMedia(media.id));
         setShowDeleteModal(false);
-        
-        toast.success(`"${media.title || media.name}" was deleted successfully!`, {
-          duration: 2000
-        });
-
-        setTimeout(() => {
-          navigate('/');
-        }, 1000);
-
+        toast.success(`"${media.title || media.name}" was deleted successfully!`, { duration: 2000 });
+        setTimeout(() => navigate('/'), 1000);
       } catch (error) {
         console.error("Failed to delete media:", error);
         toast.error("Failed to delete media. Please try again.");
@@ -193,14 +235,17 @@ const Details = () => {
   // EXTRACTING DEEP DATA TYPE-SAFELY
   const mediaData = media as ExtendedMedia;
   const topCast = mediaData.credits?.cast?.slice(0, 10) || [];
+  const seasons = mediaData.seasons?.filter(s => s.season_number > 0) || []; 
+  
   const director = mediaData.credits?.crew?.find((c) => c.job === 'Director')?.name;
+  const screenplayWriters = mediaData.credits?.crew?.filter((c) => c.job === 'Screenplay' || c.job === 'Writer').map(c => c.name).join(', ');
   const creators = mediaData.created_by?.map((c) => c.name).join(', ');
 
   return (
     <>
       <div className="bg-main min-h-screen text-text-main pb-20 -mt-20 md:-mt-24 transition-colors duration-300">
         <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
-          {backdropUrl ? (
+          {backdropUrl !== '/placeholder.jpg' ? (
             <div 
               className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 hover:scale-105"
               style={{ backgroundImage: `url(${backdropUrl})` }}
@@ -208,21 +253,34 @@ const Details = () => {
           ) : (
             <div className="absolute inset-0 bg-main/20" />
           )}
-          
-          {/* Conditional gradients to hide on light theme */}
           <div className={`absolute inset-0 transition-colors duration-1000 ${theme === 'light' ? 'bg-transparent' : 'bg-gradient-to-t from-main via-main/60 to-transparent'}`} />
           <div className={`absolute inset-0 transition-colors duration-1000 ${theme === 'light' ? 'bg-transparent' : 'bg-gradient-to-r from-main/90 via-main/40 to-transparent'}`} />
         </div>
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 -mt-72 md:-mt-96 relative z-10 flex flex-col md:flex-row gap-8 md:gap-16">
+          
+          {/* LEFT SIDEBAR: Poster & Actions */}
           <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 flex flex-col items-center">
-            {/* Shadow matches theme main background */}
             <img
               src={posterUrl}
               alt={media.title || media.name}
               className="w-64 md:w-full rounded-2xl shadow-2xl shadow-main/80 border border-text-muted/20 object-cover"
             />
             
+            <div className="w-full mt-4 flex justify-center gap-4">
+               {mediaData.homepage && (
+                  <a href={mediaData.homepage} target="_blank" rel="noreferrer" className="text-sm font-medium text-btn-bg hover:text-btn-bg/80 flex items-center gap-1 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                    Website
+                  </a>
+               )}
+               {mediaData.imdb_id && (
+                  <a href={`https://www.imdb.com/title/${mediaData.imdb_id}`} target="_blank" rel="noreferrer" className="text-sm font-bold text-yellow-500 hover:text-yellow-400 transition-colors bg-yellow-500/10 px-2 py-0.5 rounded">
+                    IMDb
+                  </a>
+               )}
+            </div>
+
             <div className="w-full mt-6 flex justify-center items-center gap-6">
               <button
                 onClick={handleFavoriteToggle}
@@ -231,44 +289,26 @@ const Details = () => {
                 }`}
                 title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill={isFavorited ? "currentColor" : "none"}
-                  viewBox="0 0 24 24" 
-                  strokeWidth="1.5" 
-                  stroke="currentColor" 
-                  className={`w-10 h-10 transition-colors ${isFavorited ? 'text-btn-bg' : 'text-text-main'}`}
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" fill={isFavorited ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={`w-10 h-10 transition-colors ${isFavorited ? 'text-btn-bg' : 'text-text-main'}`}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
                 </svg>
               </button>
 
               {isAdmin && (
                 <div className="flex justify-center items-center gap-4 border-l pl-6 border-text-muted/30">
-                  <button
-                    onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })}
-                    className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300"
-                    title="Edit Media"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
-                    </svg>
+                  <button onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })} className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                   </button>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="p-2.5 rounded-full bg-red-900/40 text-red-500 border border-red-900/50 hover:bg-red-600 hover:text-white transition-all duration-300"
-                    title="Delete Media"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                    </svg>
+                  <button onClick={() => setShowDeleteModal(true)} className="p-2.5 rounded-full bg-red-900/40 text-red-500 border border-red-900/50 hover:bg-red-600 hover:text-white transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex-1 mt-8 md:mt-16">
+          {/* RIGHT SIDEBAR: Content */}
+          <div className="flex-1 mt-8 md:mt-16 overflow-hidden">
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md text-text-main">
               {media.title || media.name}
             </h1>
@@ -287,11 +327,9 @@ const Details = () => {
                 </div>
               )}
               
-              {(media.release_date || media.first_air_date) && (
-                <span className="text-text-muted">
-                  {(media.release_date || media.first_air_date)?.substring(0, 4)}
-                </span>
-              )}
+              <span className="text-text-muted font-bold tracking-wider">
+                {getReleaseYearString(mediaData)}
+              </span>
               
               {formatRuntime(media.runtime) && (
                 <>
@@ -303,15 +341,15 @@ const Details = () => {
               {media.status && (
                 <>
                    <span className="text-text-muted/50">•</span>
-                   <span className="text-text-muted">{media.status}</span>
+                   <span className="text-text-muted bg-text-muted/10 px-2 py-0.5 rounded">{media.status}</span>
                 </>
               )}
 
-              {media.original_language && (
+              {mediaData.original_language && (
                 <>
                   <span className="text-text-muted/50">•</span>
                   <span className="uppercase text-text-muted border border-text-muted/30 px-2 py-0.5 rounded text-xs tracking-widest">
-                    {media.original_language}
+                    {mediaData.original_language}
                   </span>
                 </>
               )}
@@ -334,37 +372,80 @@ const Details = () => {
               </p>
             </div>
 
-            {/* Top Cast Grid */}
+            {/* CAST SECTION */}
             {topCast.length > 0 && (
               <div className="mb-12">
-                <h3 className="text-xl font-bold text-text-main mb-4">Top Cast</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                <h3 className="text-xl font-bold text-text-main mb-6 border-b border-text-muted/20 pb-2 inline-block">Top Cast</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {topCast.map((actor) => (
-                    <div key={actor.id} className="bg-card-bg/50 border border-text-muted/10 p-3 rounded-xl text-center shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1">
-                      <p className="text-text-main font-semibold text-sm line-clamp-2">{actor.name}</p>
+                    <div key={actor.id} className="flex flex-col bg-card-bg/30 border border-text-muted/10 rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-btn-bg/10">
+                      <img 
+                        src={getImageUrl(actor.profile_path, 'w200', true)} 
+                        alt={actor.name}
+                        className="w-full h-40 object-cover bg-main/50"
+                        loading="lazy"
+                      />
+                      <div className="p-3 text-center flex-1 flex flex-col justify-center">
+                        <p className="text-text-main font-bold text-sm line-clamp-1">{actor.name}</p>
+                        {actor.character && (
+                          <p className="text-text-muted text-xs mt-1 line-clamp-2 italic">{actor.character}</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 pt-8 border-t border-text-muted/20">
+            {/* SEASONS SECTION (TV SHOWS ONLY) - NOW A GRID */}
+            {seasons.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-xl font-bold text-text-main mb-6 border-b border-text-muted/20 pb-2 inline-block">Seasons</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {seasons.map((season) => (
+                    <div key={season.id} className="flex flex-col bg-card-bg/30 border border-text-muted/10 rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-btn-bg/10">
+                      <img 
+                        src={getImageUrl(season.poster_path, 'w200')} 
+                        alt={season.name}
+                        className="w-full h-48 sm:h-56 object-cover bg-main/50"
+                        loading="lazy"
+                      />
+                      <div className="p-3 text-center flex-1 flex flex-col justify-center">
+                        <p className="text-text-main font-bold text-sm line-clamp-1">{season.name}</p>
+                        <p className="text-text-muted text-xs mt-1">{season.episode_count} Episodes</p>
+                        {season.air_date && (
+                          <p className="text-text-muted/60 text-xs mt-0.5">{season.air_date.substring(0, 4)}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STATS & CREW GRID */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-y-8 gap-x-6 pt-8 border-t border-text-muted/20">
               
-              {/* Conditional Director or Creator */}
               {director ? (
                 <div>
                   <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Director</h4>
                   <p className="text-text-main font-semibold">{director}</p>
                 </div>
               ) : creators ? (
-                <div>
-                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Creator</h4>
-                  <p className="text-text-main font-semibold">{creators}</p>
+                <div className="col-span-1 md:col-span-2">
+                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Creator(s)</h4>
+                  <p className="text-text-main font-semibold line-clamp-2">{creators}</p>
                 </div>
               ) : null}
 
-              {/* Conditional Budget/Revenue vs Seasons/Episodes */}
+              {screenplayWriters && (
+                <div className="col-span-1 md:col-span-2">
+                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Screenplay / Writer</h4>
+                  <p className="text-text-main font-semibold line-clamp-2">{screenplayWriters}</p>
+                </div>
+              )}
+
+              {/* Financials vs TV Stats */}
               {mediaData.type === 'tv' || mediaData.number_of_seasons ? (
                 <>
                   {(mediaData.number_of_seasons ?? 0) > 0 && (
@@ -382,42 +463,74 @@ const Details = () => {
                 </>
               ) : (
                 <>
-                  {(media.budget ?? 0) > 0 && (
+                  {(mediaData.budget ?? 0) > 0 && (
                     <div>
                       <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Budget</h4>
-                      <p className="text-text-main font-semibold">{formatCurrency(media.budget)}</p>
+                      <p className="text-text-main font-semibold">{formatCurrency(mediaData.budget)}</p>
                     </div>
                   )}
-                  {(media.revenue ?? 0) > 0 && (
+                  {(mediaData.revenue ?? 0) > 0 && (
                     <div>
                       <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Revenue</h4>
-                      <p className="text-text-main font-semibold">{formatCurrency(media.revenue)}</p>
+                      <p className="text-text-main font-semibold">{formatCurrency(mediaData.revenue)}</p>
                     </div>
                   )}
                 </>
               )}
+            </div>
+
+            {/* COMPANIES, NETWORKS & LOCATIONS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 mt-8 border-t border-text-muted/20">
               
-              {media.popularity && (
-                <div>
-                  <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Popularity</h4>
-                  <p className="text-text-main font-semibold">{Number(media.popularity).toFixed(0)}</p>
+              <div className="flex flex-col gap-6">
+                {mediaData.networks && mediaData.networks.length > 0 && (
+                  <div>
+                    <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Networks</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {mediaData.networks.map((network) => (
+                        <span key={network.id} className="text-text-main text-xs font-medium bg-btn-bg/10 text-btn-bg border border-btn-bg/20 px-3 py-1.5 rounded-md">
+                          {network.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {mediaData.production_companies && mediaData.production_companies.length > 0 && (
+                  <div>
+                    <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Production Companies</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {mediaData.production_companies.map((company) => (
+                        <span key={company.id} className="text-text-main text-xs bg-text-muted/10 border border-text-muted/20 px-3 py-1.5 rounded-md">
+                          {company.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {(mediaData.spoken_languages || mediaData.production_countries) && (
+                <div className="flex flex-col gap-6">
+                  {mediaData.production_countries && mediaData.production_countries.length > 0 && (
+                    <div>
+                      <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-2">Filming Locations</h4>
+                      <p className="text-text-main text-sm font-medium">
+                        {mediaData.production_countries.map(c => c.name).join(', ')}
+                      </p>
+                    </div>
+                  )}
+                  {mediaData.spoken_languages && mediaData.spoken_languages.length > 0 && (
+                    <div>
+                      <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-2">Spoken Languages</h4>
+                      <p className="text-text-main text-sm font-medium">
+                        {mediaData.spoken_languages.map(l => l.english_name).join(', ')}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Production Companies */}
-            {mediaData.production_companies && mediaData.production_companies.length > 0 && (
-              <div className="pt-8 mt-8 border-t border-text-muted/20">
-                <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Production Companies</h4>
-                <div className="flex flex-wrap gap-2">
-                  {mediaData.production_companies.map((company) => (
-                    <span key={company.id} className="text-text-main text-xs bg-text-muted/10 border border-text-muted/20 px-3 py-1.5 rounded-md">
-                      {company.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
             
           </div>
         </div>
@@ -425,23 +538,16 @@ const Details = () => {
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
-          {/* Modal colors to match theme */}
           <div className="bg-card-bg border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl transform scale-100 transition-all duration-300">
             <h2 className="text-2xl font-bold text-text-main mb-4">Delete Media</h2>
             <p className="text-text-muted mb-8">
               Are you sure you want to delete <span className="font-semibold text-text-main">"{media.title || media.name}"</span>? This action cannot be undone.
             </p>
             <div className="flex gap-4 justify-end">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-6 py-2.5 rounded-xl font-semibold bg-text-muted/20 text-text-main hover:bg-text-muted/30 transition-colors"
-              >
+              <button onClick={() => setShowDeleteModal(false)} className="px-6 py-2.5 rounded-xl font-semibold bg-text-muted/20 text-text-main hover:bg-text-muted/30 transition-colors">
                 Cancel
               </button>
-              <button
-                onClick={confirmDelete}
-                className="px-6 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 transition-all"
-              >
+              <button onClick={confirmDelete} className="px-6 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 transition-all">
                 Yes, Delete
               </button>
             </div>
