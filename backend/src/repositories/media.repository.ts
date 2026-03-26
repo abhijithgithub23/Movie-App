@@ -17,6 +17,7 @@ export const getTrendingMediaDB = async () => {
     LIMIT 20;
   `;
   const { rows } = await pool.query(query);
+  // console.log(rows);
   return rows;
 };
 
@@ -40,6 +41,8 @@ export const getMediaByTypeDB = async (type: 'movie' | 'tv', page: number, limit
     LIMIT $2 OFFSET $3;
   `;
   const { rows } = await pool.query(query, [type, limit, offset]);
+  // console.log(rows);
+
   return rows;
 };
 
@@ -52,6 +55,8 @@ export const getMediaDetailsDB = async (type: string, tmdbId: number) => {
     WHERE tmdb_id = $1 AND type = $2;
   `;
   const { rows } = await pool.query(query, [tmdbId, type]);
+  // console.log(rows);
+
   return rows[0]; 
 };
 

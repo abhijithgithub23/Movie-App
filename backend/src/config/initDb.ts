@@ -80,13 +80,15 @@ export const initializeDatabase = async () => {
       );
 
       -- 4. USERS TABLE
-      CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          username VARCHAR(50) UNIQUE NOT NULL,
-          email VARCHAR(100) UNIQUE NOT NULL,
-          password_hash VARCHAR(255) NOT NULL,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,      -- NEW
+                profile_pic TEXT,                    -- NEW
+                created_at TIMESTAMP DEFAULT NOW()
+            );
 
       -- 5. FAVORITES TABLE
       CREATE TABLE IF NOT EXISTS user_favorites (
