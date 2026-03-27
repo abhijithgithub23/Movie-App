@@ -1,6 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 import mediaReducer from "../features/media/mediaSlice";
 import favoritesReducer from "../features/favorites/favoritesSlice";
+import authReducer from '../features/auth/authSlice'; 
 import {
   persistStore,
   persistReducer,
@@ -32,6 +33,7 @@ export const store = configureStore({
   reducer: {
     media: persistedMediaReducer,
     favorites: persistedFavoritesReducer,
+    auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

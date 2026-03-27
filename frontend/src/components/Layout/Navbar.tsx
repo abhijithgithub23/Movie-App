@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { NavLink } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import LogoutModal from "../ui/LogoutModal";
 import GlassyDropdown from "../ui/GlassyDropdown"; 
 import { useTheme, type Theme } from "../../context/ThemeContext"; 
 import { Search, Heart, Menu, X, Plus, LogOut, Home, Film, Tv, User } from "lucide-react";
+import type { RootState } from "../../store/store";
 
 // --- STATIC DATA ---
 const themeOptions = [
@@ -40,15 +41,19 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 const Navbar = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, loginWithRedirect, user } = useAuth0();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  
+  // Pull authentication state directly from your new Redux store
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   
-  const isAdmin = user?.email === "abhijithksd23@gmail.com";
+  // Check the admin status directly from the database response saved in Redux
+  const isAdmin = user?.is_admin;
 
   const handleThemeChange = useCallback((val: string) => {
     setTheme(val as Theme);
@@ -123,7 +128,7 @@ const Navbar = () => {
                 </NavLink>
               ) : (
                 <button
-                  onClick={() => loginWithRedirect()}
+                  onClick={() => navigate('/login')}
                   title={t("favorites")}
                   className="text-text-muted hover:text-red-500 transition-colors duration-300"
                 >
@@ -162,10 +167,10 @@ const Navbar = () => {
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                     className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-text-main/50 transition-colors focus:outline-none focus:ring-2 focus:ring-text-main/20"
-                    title={user?.name || "Profile"}
+                    title={user?.username || "Profile"}
                   >
                     <img
-                      src={user?.picture || DEFAULT_AVATAR}
+                      src={user?.profile_pic || DEFAULT_AVATAR}
                       alt="Profile"
                       className="w-full h-full object-cover bg-text-main/10"
                       referrerPolicy="no-referrer"
@@ -178,7 +183,7 @@ const Navbar = () => {
                   {isProfileOpen && (
                     <div className="absolute right-0 mt-3 min-w-[160px] bg-nav/90 backdrop-blur-xl border border-text-main/10 rounded-xl shadow-2xl py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="px-4 py-2 mb-1 border-b border-text-muted/10">
-                        <p className="text-sm font-semibold text-text-main truncate">{user?.name}</p>
+                        <p className="text-sm font-semibold text-text-main truncate">{user?.username}</p>
                         <p className="text-xs text-text-muted truncate">{user?.email}</p>
                       </div>
                       
@@ -210,7 +215,7 @@ const Navbar = () => {
                 </div>
               ) : (
                 <button
-                  onClick={() => loginWithRedirect()}
+                  onClick={() => navigate('/login')}
                   className="bg-btn-bg text-btn-text px-5 py-1.5 rounded-sm font-bold opacity-90 hover:opacity-100 transition-all ml-2"
                 >
                   {t("login")}
@@ -267,7 +272,7 @@ const Navbar = () => {
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    loginWithRedirect();
+                    navigate('/login');
                   }}
                   className="flex flex-col items-center gap-1 text-text-muted hover:text-red-500 transition-colors"
                 >
@@ -298,7 +303,7 @@ const Navbar = () => {
                 <div className="flex items-center gap-3 mb-2 px-2">
                   <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
                     <img
-                      src={user?.picture || DEFAULT_AVATAR}
+                      src={user?.profile_pic || DEFAULT_AVATAR}
                       alt="Profile"
                       className="w-full h-full object-cover bg-text-main/10"
                       referrerPolicy="no-referrer"
@@ -309,7 +314,7 @@ const Navbar = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-text-main truncate">
-                      {user?.name}
+                      {user?.username}
                     </p>
                     <p className="text-xs text-text-muted truncate">
                       {user?.email}
@@ -339,7 +344,10 @@ const Navbar = () => {
               </div>
             ) : (
               <button
-                onClick={() => loginWithRedirect()}
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/login');
+                }}
                 className="bg-btn-bg text-btn-text w-full py-3 rounded-xl font-bold"
               >
                 {t("login")}

@@ -2,18 +2,27 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mediaRoutes from './routes/media.routes';
-import { initializeDatabase } from './config/initDb'; // Make sure this path matches where you saved the file!
+import { initializeDatabase } from './config/initDb';
+import cookieParser from 'cookie-parser';
+import authRoutes from './routes/auth.routes'; 
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
+
+
 
 // Routes
 app.use('/api/media', mediaRoutes);
+app.use('/api/auth', authRoutes); 
+
+
 
 // Wrap the startup logic in an async function
 const startServer = async () => {

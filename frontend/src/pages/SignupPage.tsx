@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import cineviaImg from "../assets/cinevia.png"
+import cineviaImg from "../assets/cinevia.png";
+import { registerUser } from '../features/auth/authSlice';
+import type { AppDispatch, RootState } from '../store/store';
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { status } = useSelector((state: RootState) => state.auth);
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -15,7 +21,7 @@ const SignupPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.username || !formData.email || !formData.password) {
@@ -23,29 +29,30 @@ const SignupPage = () => {
       return;
     }
 
-    toast.success("Account created successfully!");
-    navigate('/login');
+    try {
+      await dispatch(registerUser(formData)).unwrap();
+      toast.success("Account created successfully!");
+      // Send them straight to the app since the backend already logged them in!
+      navigate('/'); 
+    }  catch (err) {
+      toast.error((err as string) || "Failed to log in. Please check your credentials.");
+    } 
   };
 
   return (
     <div className="min-h-screen flex bg-main transition-colors duration-300 flex-row-reverse relative overflow-hidden">
       
-      {/* Mobile/Tablet Background - Blurred & Tinted (Hidden on Desktop) */}
       <div 
         className="absolute inset-0 z-0 lg:hidden bg-cover bg-center"
         style={{ backgroundImage: `url(${cineviaImg})` }}
       >
-        {/* Overlay to ensure the form remains perfectly readable */}
         <div className="absolute inset-0 bg-main/80 backdrop-blur-lg transition-colors duration-300" />
       </div>
 
-      {/* Right Side - Cinematic Image Banner (Desktop Only) - Reversed for visual variety */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
         <div 
           className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 hover:scale-105"
-          style={{ 
-            backgroundImage: `url(${cineviaImg})`
-          }}
+          style={{ backgroundImage: `url(${cineviaImg})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-main via-transparent to-transparent opacity-90" />
@@ -60,22 +67,16 @@ const SignupPage = () => {
         </div>
       </div>
 
-      {/* Left Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative z-10">
         <div className="max-w-md w-full space-y-8">
           
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl sm:text-5xl font-black text-text-main mb-3 tracking-tight">
-              Sign Up
-            </h1>
-            <p className="text-text-muted text-lg">
-              Create your account in seconds.
-            </p>
+            <h1 className="text-4xl sm:text-5xl font-black text-text-main mb-3 tracking-tight">Sign Up</h1>
+            <p className="text-text-muted text-lg">Create your account in seconds.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-10 space-y-5">
             
-            {/* Username Input */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-btn-bg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
@@ -93,7 +94,6 @@ const SignupPage = () => {
               />
             </div>
 
-            {/* Email Input */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-btn-bg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
@@ -111,7 +111,6 @@ const SignupPage = () => {
               />
             </div>
 
-            {/* Password Input */}
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-text-muted group-focus-within:text-btn-bg transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
@@ -132,19 +131,17 @@ const SignupPage = () => {
 
             <button
               type="submit"
-              className="w-full py-4 px-6 mt-6 bg-btn-bg text-btn-text font-bold text-lg rounded-2xl shadow-xl shadow-btn-bg/20 hover:bg-btn-bg/90 hover:-translate-y-1 active:translate-y-0 active:scale-95 transition-all duration-300"
+              disabled={status === 'loading'}
+              className="w-full py-4 px-6 mt-6 bg-btn-bg text-btn-text font-bold text-lg rounded-2xl shadow-xl shadow-btn-bg/20 hover:bg-btn-bg/90 hover:-translate-y-1 active:translate-y-0 active:scale-95 transition-all duration-300 disabled:opacity-70 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
             >
-              Create Account
+              {status === 'loading' ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
           <div className="pt-6 text-center lg:text-left border-t border-text-muted/10">
             <p className="text-text-muted">
               Already have an account?{' '}
-              <Link 
-                to="/login" 
-                className="font-bold text-text-main hover:text-btn-bg transition-colors duration-300 underline underline-offset-4 decoration-2 decoration-btn-bg/30 hover:decoration-btn-bg"
-              >
+              <Link to="/login" className="font-bold text-text-main hover:text-btn-bg transition-colors duration-300 underline underline-offset-4 decoration-2 decoration-btn-bg/30 hover:decoration-btn-bg">
                 Log in here
               </Link>
             </p>
