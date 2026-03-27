@@ -90,6 +90,33 @@ export const getMediaDetailsDB = async (type: string, tmdbId: number) => {
   return rows[0]; 
 };
 
+
+// Define the TMDB Genre Mapping Dictionary outside the function so it's reusable
+const getRelatedGenreIds = (genreId: number): number[] => {
+  const genreMap: Record<number, number[]> = {
+    // Action (28) / Adventure (12) -> TV Action & Adventure (10759)
+    28: [28, 10759],
+    12: [12, 10759],
+    10759: [10759, 28, 12], 
+    
+    // Sci-Fi (878) / Fantasy (14) -> TV Sci-Fi & Fantasy (10765)
+    878: [878, 10765],
+    14: [14, 10765],
+    10765: [10765, 878, 14],
+    
+    // War (10752) -> TV War & Politics (10768)
+    10752: [10752, 10768],
+    10768: [10768, 10752],
+
+    // Family (10751) -> TV Kids (10762)
+    10751: [10751, 10762],
+    10762: [10762, 10751],
+  };
+
+  // If the genre is in the map, return the expanded array. Otherwise, just return the original ID.
+  return genreMap[genreId] || [genreId];
+};
+
 export const searchMediaDB = async (
   searchTerm: string, 
   filters: { mediaType?: string; year?: string; rating?: number; language?: string; genre?: number }
@@ -107,7 +134,6 @@ export const searchMediaDB = async (
       m.vote_average,
       m.release_date,
       m.first_air_date,
-      -- Safely extract the first language code from the JSONB array to send to the frontend
       m.spoken_languages->0->>'iso_639_1' AS original_language,
       COALESCE(json_agg(mg.genre_id) FILTER (WHERE mg.genre_id IS NOT NULL), '[]') AS genre_ids
     FROM media m
@@ -134,23 +160,26 @@ export const searchMediaDB = async (
   }
 
   if (filters.language && filters.language !== 'all') {
-    // The @> operator checks if the JSONB array contains this exact object structure
     queryText += ` AND m.spoken_languages @> $${paramIndex}::jsonb`;
-    // We stringify the exact JSON structure we are looking for in the database
     values.push(JSON.stringify([{ iso_639_1: filters.language }]));
     paramIndex++;
   }
 
   if (filters.genre) {
-    queryText += ` AND EXISTS (SELECT 1 FROM media_genres mg2 WHERE mg2.media_tmdb_id = m.tmdb_id AND mg2.genre_id = $${paramIndex})`;
-    values.push(filters.genre);
+    // FIX: Use the mapping dictionary to automatically grab all related IDs
+    const targetGenres = getRelatedGenreIds(filters.genre);
+    
+    queryText += ` AND EXISTS (
+      SELECT 1 FROM media_genres mg2 
+      WHERE mg2.media_tmdb_id = m.tmdb_id AND mg2.genre_id = ANY($${paramIndex}::int[])
+    )`;
+    values.push(targetGenres);
     paramIndex++;
   }
 
   queryText += `
     GROUP BY m.id
     ORDER BY COALESCE(m.release_date, m.first_air_date) DESC NULLS LAST
-    
   `;
 
   const { rows } = await pool.query(queryText, values);
