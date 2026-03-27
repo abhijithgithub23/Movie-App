@@ -1,25 +1,54 @@
 import pool from '../config/db';
 
 export const getTrendingMediaDB = async () => {
-  // OPTIMIZED: Only fetching the exact columns needed for Home/Hero/MediaRow
   const query = `
-    SELECT 
-      tmdb_id AS id, 
-      type AS media_type, 
-      title, 
-      original_name AS name, 
-      backdrop_path, 
-      poster_path, 
-      overview, 
-      vote_average 
-    FROM media 
-    ORDER BY vote_average DESC NULLS LAST 
-    LIMIT 20;
+    WITH TrendingMovies AS (
+      SELECT 
+        tmdb_id AS id, 
+        type AS media_type, 
+        title, 
+        original_name AS name, 
+        backdrop_path, 
+        poster_path, 
+        overview, 
+        vote_average,
+        popularity -- Added this so the final query can sort by it
+      FROM media 
+      WHERE type = 'movie' 
+      ORDER BY popularity DESC NULLS LAST 
+      LIMIT 20
+    ),
+    TrendingTVShows AS (
+      SELECT 
+        tmdb_id AS id, 
+        type AS media_type, 
+        title, 
+        original_name AS name, 
+        backdrop_path, 
+        poster_path, 
+        overview, 
+        vote_average,
+        popularity -- Added this so the final query can sort by it
+      FROM media 
+      WHERE type = 'tv' 
+      ORDER BY popularity DESC NULLS LAST 
+      LIMIT 20
+    ),
+    CombinedTrending AS (
+      SELECT * FROM TrendingMovies
+      UNION ALL
+      SELECT * FROM TrendingTVShows
+    )
+    -- Sort the combined 40 items together by overall popularity
+    SELECT * FROM CombinedTrending
+    ORDER BY popularity DESC NULLS LAST;
   `;
+  
   const { rows } = await pool.query(query);
-  // console.log(rows);
   return rows;
 };
+
+
 
 export const getMediaByTypeDB = async (type: 'movie' | 'tv', page: number, limit: number) => {
   const offset = (page - 1) * limit;
@@ -34,15 +63,16 @@ export const getMediaByTypeDB = async (type: 'movie' | 'tv', page: number, limit
       backdrop_path, 
       poster_path, 
       overview, 
-      vote_average 
+      vote_average,
+      popularity -- Added popularity to the select just in case the frontend needs it later
     FROM media 
     WHERE type = $1 
-    ORDER BY vote_average DESC NULLS LAST 
+    -- CHANGED: Now sorting by popularity so the best/most relevant media shows up on Page 1!
+    ORDER BY popularity DESC NULLS LAST 
     LIMIT $2 OFFSET $3;
   `;
+  
   const { rows } = await pool.query(query, [type, limit, offset]);
-  // console.log(rows);
-
   return rows;
 };
 

@@ -2,8 +2,8 @@ import { Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 
 import MainLayout from "../layouts/MainLayout";
-import ProtectedRoutes from "./ProtectedRoutes";
-import AdminRoutes from "./AdminRoutes";
+// import ProtectedRoutes from "./ProtectedRoutes";
+// import AdminRoutes from "./AdminRoutes";
 
 /* Lazy loaded pages */
 const Home = lazy(() => import("../pages/Home"));
@@ -41,17 +41,23 @@ export default function AppRoutes() {
           <Route path="/search" element={<Search />} />
           <Route path="/details/:type/:id" element={<Details />} />
 
-          {/* User must be logged in to view Favorites */}
+          <Route path="/favorites" element={<Favorites />} />
+          <Route path="/profile" element={<ProfilePage />} />
+
+          <Route path="/admin/add" element={<AddMedia />} />
+          <Route path="/admin/edit/:type/:id" element={<EditMedia />} />
+
+          {/* User must be logged in to view Favorites
           <Route element={<ProtectedRoutes />}>
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
-          {/* User must be logged in AND an admin */}
+          User must be logged in AND an admin
           <Route element={<AdminRoutes />}>
             <Route path="/admin/add" element={<AddMedia />} />
             <Route path="/admin/edit/:type/:id" element={<EditMedia />} />
-          </Route>
+          </Route> */}
 
         </Route>
 
