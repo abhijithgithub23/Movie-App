@@ -251,6 +251,8 @@ const initialState: MediaState = {
   },
 };
 
+
+
 // -----------------------------
 // Thunks
 // -----------------------------
@@ -288,13 +290,25 @@ export const getTVShows = createAsyncThunk<{ results: Media[]; page: number }, n
 );
 
 // Search
-export const searchMediaThunk = createAsyncThunk<Media[], string>(
-  "media/searchMedia",
-  async (query) => {
-    // Points to http://localhost:5000/api/media/search
-    const res = await tmdbApi.get("/media/search", { params: { query } });
-    return res.data.results;
-  }
+export interface SearchFilters {
+  mediaType?: string;
+  year?: string;
+  rating?: number;
+  language?: string;
+  genre?: number | null;
+}
+
+export const searchMediaThunk = createAsyncThunk(
+  'media/search',
+  async ({ query, filters }: { query: string; filters?: SearchFilters }) => {
+    // Pass the filters as query parameters to Axios
+    const response = await tmdbApi.get('/media/search', {
+      params: {
+        query,
+        ...filters
+      }
+    });
+    return response.data.results || response.data;  }
 );
 
 // -----------------------------

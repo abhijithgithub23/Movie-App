@@ -23,7 +23,7 @@ export const fetchMediaDetails = async (type: string, tmdbId: number) => {
   return details;
 };
 
-export const searchMedia = async (query: string) => {
-  const results = await searchMediaDB(query);
+export const searchMedia = async (query: string, filters: any) => {
+  const results = await searchMediaDB(query, filters);
   return { results }; 
 };

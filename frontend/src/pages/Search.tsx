@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { searchMediaThunk, clearSearchResults } from '../features/media/mediaSlice';
 import type { RootState, AppDispatch } from '../store/store';
 
-import {type FilterState, type MediaItem } from '../components/Search/searchConstants';
+import { type FilterState, type MediaItem } from '../components/Search/searchConstants';
 import SearchForm from '../components/Search/SearchForm';
 import FilterSidebar from '../components/Search/FilterSidebar';
 import ResultsArea from '../components/Search/ResultsArea';
@@ -11,6 +11,7 @@ import ResultsArea from '../components/Search/ResultsArea';
 const Search = () => {
   const dispatch = useDispatch<AppDispatch>();
   
+  // The results from Redux are now pre-filtered by the backend!
   const searchResults = useSelector((state: RootState) => state.media.searchResults as MediaItem[]);
   const searchStatus = useSelector((state: RootState) => state.media.status.searchResults);
   
@@ -39,6 +40,7 @@ const Search = () => {
     });
   }, []);
 
+  // Save filters to session storage
   useEffect(() => {
     sessionStorage.setItem('cv_mediaType', filters.mediaType);
     sessionStorage.setItem('cv_year', filters.year);
@@ -48,23 +50,22 @@ const Search = () => {
     else sessionStorage.removeItem('cv_genre');
   }, [filters]);
 
+  // FIRE BACKEND SEARCH WHENEVER FILTERS OR QUERY CHANGE
   useEffect(() => {
-    const savedQuery = sessionStorage.getItem('cv_query');
-    const savedHasSearched = sessionStorage.getItem('cv_hasSearched') === 'true';
-    if (savedHasSearched && savedQuery && searchResults.length === 0) {
-      dispatch(searchMediaThunk(savedQuery));
+    if (hasSearched && committedQuery) {
+      // Send both the query AND the filters to the backend
+      dispatch(searchMediaThunk({ query: committedQuery, filters }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [filters, committedQuery, hasSearched, dispatch]); 
 
   const handleSearchSubmit = useCallback((newQuery: string) => {
-    // This now hits your PostgreSQL database via the backend route!
-    dispatch(searchMediaThunk(newQuery));
     setHasSearched(true);
     setCommittedQuery(newQuery);
     sessionStorage.setItem('cv_query', newQuery);
     sessionStorage.setItem('cv_hasSearched', 'true');
-  }, [dispatch]);
+    // The useEffect above will automatically catch this change and fire the dispatch!
+  }, []);
 
   const handleClearEverything = useCallback(() => {
     setCommittedQuery('');
@@ -74,33 +75,18 @@ const Search = () => {
     sessionStorage.removeItem('cv_hasSearched');
   }, [dispatch]);
 
-  const filteredResults = useMemo(() => {
-    let results = searchResults.filter((m) => m.media_type === "movie" || m.media_type === "tv");
-    if (filters.mediaType !== 'all') results = results.filter((m) => m.media_type === filters.mediaType);
-    if (filters.genre) results = results.filter((m) => m.genre_ids && m.genre_ids.includes(filters.genre!));
-    if (filters.rating > 0) results = results.filter((m) => (m.vote_average || 0) >= filters.rating);
-    if (filters.year !== 'all') results = results.filter((m) => (m.release_date || m.first_air_date || '').startsWith(filters.year));
-    if (filters.language !== 'all') results = results.filter((m) => m.original_language === filters.language);
-
-    return results.sort((a, b) => {
-      const dateA = new Date(a.release_date || a.first_air_date || 0).getTime();
-      const dateB = new Date(b.release_date || b.first_air_date || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [searchResults, filters]);
-
   return (
     <div className="bg-main text-text-main min-h-screen pt-8 px-6 md:px-12 pb-12 transition-colors duration-300">
       <div className="flex flex-col md:flex-row gap-8 w-full mx-auto">
         <FilterSidebar filters={filters} updateFilter={updateFilter} clearFilters={clearFilters} />
         <div className="flex-1 w-full z-10">
           <SearchForm initialQuery={committedQuery} onSearchSubmit={handleSearchSubmit} onClear={handleClearEverything} />
-          <div className={`transition-opacity duration-200 ${isPending ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+          <div className={`transition-opacity duration-200 ${isPending || searchStatus === 'loading' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
             <ResultsArea 
               query={committedQuery} 
               searchStatus={searchStatus} 
               hasSearched={hasSearched} 
-              filteredResults={filteredResults} 
+              filteredResults={searchResults} // Just pass the raw Redux array directly!
               clearFilters={clearFilters} 
             />
           </div>

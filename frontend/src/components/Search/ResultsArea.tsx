@@ -23,7 +23,10 @@ const MediaCard = memo(({ m }: { m: MediaItem }) => (
     <div className="p-5 absolute bottom-0 left-0 right-0 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-20">
       <h2 className="font-bold text-text-main leading-tight mb-2 drop-shadow-md">{m.title || m.name}</h2>
       <div className="flex items-center gap-3 text-xs font-medium text-text-main/80">
-        <span className="flex items-center gap-1 text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">★ {m.vote_average?.toFixed(1) || 'NR'}</span>
+        {/* FIX: Wrapped m.vote_average in Number() before calling .toFixed() */}
+        <span className="flex items-center gap-1 text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+          ★ {m.vote_average ? Number(m.vote_average).toFixed(1) : 'NR'}
+        </span>
         <span>{(m.release_date || m.first_air_date)?.substring(0, 4) || 'N/A'}</span>
         <span className="uppercase text-text-muted">{m.original_language || ''}</span>
       </div>

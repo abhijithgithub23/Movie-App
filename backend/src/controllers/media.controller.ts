@@ -67,18 +67,25 @@ export const getMediaDetails = async (
 
 export const searchMediaController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const searchQuery = req.query.query as string;
+    const { query, mediaType, year, rating, language, genre } = req.query;
     
-    if (!searchQuery) {
+    if (!query) {
       res.status(400).json({ message: 'Search query is required' });
       return;
     }
 
-    const data = await searchMedia(searchQuery);
+    const filters = {
+      mediaType: mediaType as string,
+      year: year as string,
+      rating: rating ? Number(rating) : 0,
+      language: language as string,
+      genre: genre ? Number(genre) : null
+    };
+
+    const data = await searchMedia(query as string, filters);
     res.status(200).json(data);
   } catch (error) {
     console.error('Error searching media:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
