@@ -94,6 +94,8 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
 
   const refreshToken = cookies.jwt;
 
+  // console.log("🟡 OLD REFRESH TOKEN:", refreshToken);
+
   jwt.verify(refreshToken, REFRESH_SECRET, async (err: any, decoded: any) => {
     if (err) {
       res.status(403).json({ message: 'Forbidden - Token expired or invalid' });
@@ -101,7 +103,6 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
     }
 
     try {
-      // FIX: Fetch the user data from the database using the ID inside the decoded token
       const result = await pool.query(
         'SELECT id, username, email, is_admin, profile_pic FROM users WHERE id = $1', 
         [decoded.id]
@@ -113,10 +114,17 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
         res.status(404).json({ message: 'User not found' });
         return;
       }
-
-      // Generate a new access token
-      const accessToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '15m' });
       
+      // Generate BOTH new access and refresh tokens
+      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id);
+
+      // console.log("🟢 NEW REFRESH TOKEN:", newRefreshToken);
+
+      
+      // Update the cookie with the new refresh token (Token Rotation)
+      res.cookie('jwt', newRefreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+  
       // Send BOTH the user data and the new token back to rebuild the Redux state
       res.json({ user, accessToken });
     } catch (dbError) {
@@ -125,6 +133,7 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
     }
   });
 };
+
 export const logout = (req: Request, res: Response): void => {
   // Clear the cookie from the browser
   res.clearCookie('jwt', cookieOptions);
