@@ -54,6 +54,23 @@ export const registerUser = createAsyncThunk<AuthResponse, RegisterCredentials>(
   }
 );
 
+// Add this new Thunk
+export const checkAuth = createAsyncThunk<AuthResponse, void>(
+  'auth/checkAuth',
+  async (_, { rejectWithValue }) => {
+    try {
+      // Hit the refresh endpoint to see if we have a valid HTTP-only cookie
+      const response = await axios.post<AuthResponse>(`${AUTH_URL}/refresh`, {}, { withCredentials: true });
+      return response.data; // Returns { user, accessToken }
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Session expired');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
 // --- SLICE ---
 export interface AuthState {
   user: User | null;
@@ -117,6 +134,25 @@ const authSlice = createSlice({
     builder.addCase(registerUser.rejected, (state, action) => {
       state.status = 'failed';
       state.error = action.payload as string;
+    });
+
+    // Handle Check Auth (On App Load)
+    builder.addCase(checkAuth.pending, (state) => {
+      // We use 'loading' here so we can show a spinner in App.tsx while checking
+      state.status = 'loading'; 
+    });
+    builder.addCase(checkAuth.fulfilled, (state, action) => {
+      state.status = 'succeeded';
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.isAuthenticated = true;
+    });
+    builder.addCase(checkAuth.rejected, (state) => {
+      // If it fails (no cookie, expired), we just silently fail and stay logged out
+      state.status = 'idle'; 
+      state.user = null;
+      state.accessToken = null;
+      state.isAuthenticated = false;
     });
   },
 });

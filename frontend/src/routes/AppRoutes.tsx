@@ -1,9 +1,13 @@
 import { Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { checkAuth } from "../features/auth/authSlice";
+import type { AppDispatch, RootState } from "../store/store";
 
 import MainLayout from "../layouts/MainLayout";
-// import ProtectedRoutes from "./ProtectedRoutes";
-// import AdminRoutes from "./AdminRoutes";
+import ProtectedRoutes from "./ProtectedRoutes";
+import AdminRoutes from "./AdminRoutes";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 /* Lazy loaded pages */
 const Home = lazy(() => import("../pages/Home"));
@@ -16,13 +20,27 @@ const AddMedia = lazy(() => import("../pages/AddMedia"));
 const EditMedia = lazy(() => import("../pages/EditMedia"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 const ProfilePage = lazy(() => import("../pages/ProfilePage"));
-
 const LoginPage = lazy(() => import("../pages/LoginPage"));
 const SignupPage = lazy(() => import("../pages/SignupPage"));
 
-import LoadingSpinner from "../components/ui/LoadingSpinner";
-
 export default function AppRoutes() {
+  const dispatch = useDispatch<AppDispatch>();
+  const { status } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    // 1. Instantly check if the user has a valid HttpOnly cookie when the app loads
+    dispatch(checkAuth());
+  }, [dispatch]);
+
+  // 2. While the backend is verifying the cookie, show a spinner so the UI doesn't flash
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-main">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
@@ -41,23 +59,17 @@ export default function AppRoutes() {
           <Route path="/search" element={<Search />} />
           <Route path="/details/:type/:id" element={<Details />} />
 
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/profile" element={<ProfilePage />} />
-
-          <Route path="/admin/add" element={<AddMedia />} />
-          <Route path="/admin/edit/:type/:id" element={<EditMedia />} />
-
-          {/* User must be logged in to view Favorites
+          {/* --- PROTECTED ROUTES (Must be logged in) --- */}
           <Route element={<ProtectedRoutes />}>
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
-          User must be logged in AND an admin
+          {/* --- ADMIN ROUTES (Must be logged in AND an Admin) --- */}
           <Route element={<AdminRoutes />}>
             <Route path="/admin/add" element={<AddMedia />} />
             <Route path="/admin/edit/:type/:id" element={<EditMedia />} />
-          </Route> */}
+          </Route>
 
         </Route>
 

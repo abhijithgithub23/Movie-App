@@ -3,28 +3,39 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db';
 
+
+export const JWT_SECRET = process.env.JWT_SECRET;
+export const REFRESH_SECRET = process.env.REFRESH_SECRET;
+
+if (!JWT_SECRET || !REFRESH_SECRET) {
+  throw new Error('Missing required environment variables');
+}
+
 const generateTokens = (userId: number) => {
-  const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'secret123', { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: userId }, process.env.REFRESH_SECRET || 'refreshSecret123', { expiresIn: '7d' });
+  const accessToken = jwt.sign({ id: userId }, JWT_SECRET , { expiresIn: '15m' });
+  const refreshToken = jwt.sign({ id: userId }, REFRESH_SECRET , { expiresIn: '7d' });
   return { accessToken, refreshToken };
+};
+
+// Standardized cookie options for reuse
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production', 
+  sameSite: 'strict' as const,
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, email, password } = req.body;
 
-    // 1. Check if user exists
     const userCheck = await pool.query('SELECT * FROM users WHERE email = $1 OR username = $2', [email, username]);
     if (userCheck.rows.length > 0) {
       res.status(400).json({ message: 'User already exists' });
       return;
     }
 
-    // 2. Hash password
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
-
-    // 3. Admin logic & Database Insert
     const isAdmin = email === 'abhijithksd23@gmail.com';
     
     const newUser = await pool.query(
@@ -37,14 +48,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const user = newUser.rows[0];
     const { accessToken, refreshToken } = generateTokens(user.id);
 
-    // 4. Send Refresh Token in HTTP-Only Cookie
-    res.cookie('jwt', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', 
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    // Set Refresh Token in HTTP-Only Cookie
+    res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
 
+    // Send User and Access Token in the JSON response
     res.status(201).json({ user, accessToken });
   } catch (error) {
     console.error('Registration error:', error);
@@ -66,17 +73,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const { accessToken, refreshToken } = generateTokens(user.id);
 
-    res.cookie('jwt', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    // Set Refresh Token in HTTP-Only Cookie
+    res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-    // Don't send the password hash back!
-    const { password_hash, ...userWithoutPassword } = user;
-    res.status(200).json({ user: userWithoutPassword, accessToken });
+    // Send User and Access Token in the JSON response (excluding password hash)
+    const { password_hash, ...userWithoutSensitiveData } = user;
+    res.status(200).json({ user: userWithoutSensitiveData, accessToken });
   } catch (error) {
+    console.error('LOGIN ERROR:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };
@@ -90,22 +94,39 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
 
   const refreshToken = cookies.jwt;
 
-  jwt.verify(refreshToken, process.env.REFRESH_SECRET || 'refreshSecret123', async (err: any, decoded: any) => {
-    if (err) return res.status(403).json({ message: 'Forbidden - Invalid Refresh Token' });
+  jwt.verify(refreshToken, REFRESH_SECRET, async (err: any, decoded: any) => {
+    if (err) {
+      res.status(403).json({ message: 'Forbidden - Token expired or invalid' });
+      return;
+    }
 
-    // Generate new access token
-    const accessToken = jwt.sign({ id: decoded.id }, process.env.JWT_SECRET || 'secret123', { expiresIn: '15m' });
-    res.json({ accessToken });
+    try {
+      // FIX: Fetch the user data from the database using the ID inside the decoded token
+      const result = await pool.query(
+        'SELECT id, username, email, is_admin, profile_pic FROM users WHERE id = $1', 
+        [decoded.id]
+      );
+      
+      const user = result.rows[0];
+      
+      if (!user) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+      }
+
+      // Generate a new access token
+      const accessToken = jwt.sign({ id: decoded.id }, JWT_SECRET, { expiresIn: '15m' });
+      
+      // Send BOTH the user data and the new token back to rebuild the Redux state
+      res.json({ user, accessToken });
+    } catch (dbError) {
+      console.error('Database error during refresh:', dbError);
+      res.status(500).json({ message: 'Server error during token refresh' });
+    }
   });
 };
-
 export const logout = (req: Request, res: Response): void => {
-  // We tell the browser to instantly destroy the refresh token cookie
-  res.clearCookie('jwt', { 
-    httpOnly: true, 
-    sameSite: 'strict', 
-    secure: process.env.NODE_ENV === 'production' 
-  });
-  
+  // Clear the cookie from the browser
+  res.clearCookie('jwt', cookieOptions);
   res.status(200).json({ message: 'Logged out successfully' });
 };
