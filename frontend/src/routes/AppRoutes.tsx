@@ -28,11 +28,11 @@ export default function AppRoutes() {
   const { status } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    // 1. Instantly check if the user has a valid HttpOnly cookie when the app loads
+    // Instantly check if the user has a valid HttpOnly cookie when the app loads
     dispatch(checkAuth());
   }, [dispatch]);
 
-  // 2. While the backend is verifying the cookie, show a spinner so the UI doesn't flash
+  // While the backend is verifying the cookie, show a spinner so the UI doesn't flash
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-main">
@@ -44,14 +44,12 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
-
         {/* --- Public Auth Routes --- */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
         {/* --- Main App Routes --- */}
         <Route element={<MainLayout />}>
-
           {/* Publicly accessible pages */}
           <Route path="/" element={<Home />} />
           <Route path="/movies" element={<Movies />} />
@@ -70,11 +68,9 @@ export default function AppRoutes() {
             <Route path="/admin/add" element={<AddMedia />} />
             <Route path="/admin/edit/:type/:id" element={<EditMedia />} />
           </Route>
-
         </Route>
 
         <Route path="*" element={<NotFound />} />
-
       </Routes>
     </Suspense>
   );

@@ -1,7 +1,8 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import { useTranslation } from "react-i18next";
-import { Shield, User as UserIcon, Mail, Calendar, LogOut } from "lucide-react";
+import { Shield, User as UserIcon, Mail, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store/store";
 import LogoutModal from "../components/ui/LogoutModal";
 
 // Default avatar image link
@@ -9,9 +10,12 @@ const DEFAULT_AVATAR = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Prof
 
 const ProfilePage = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const { user, isAuthenticated, isLoading } = useAuth0();
   const { t } = useTranslation();
+  
+  // Pull authentication state directly from Redux instead of Auth0
+  const { user, isAuthenticated, status } = useSelector((state: RootState) => state.auth);
+  
+  const isLoading = status === 'loading';
 
   if (isLoading) {
     return (
@@ -36,7 +40,8 @@ const ProfilePage = () => {
     );
   }
 
-  const isAdmin = user.email === "abhijithksd23@gmail.com";
+  // Use the database's is_admin flag instead of hardcoding an email
+  const isAdmin = user.is_admin === true;
 
   return (
     <>
@@ -56,7 +61,7 @@ const ProfilePage = () => {
               <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-text-main/10 shadow-xl bg-text-main/5 flex items-center justify-center text-text-main">
                 
                 <img
-                  src={user?.picture || DEFAULT_AVATAR}
+                  src={user.profile_pic || DEFAULT_AVATAR}
                   alt="Profile"
                   className="w-full h-full object-cover bg-text-main/10"
                   referrerPolicy="no-referrer"
@@ -82,7 +87,7 @@ const ProfilePage = () => {
             <div className="flex-1 space-y-6 text-center md:text-left w-full">
               <div>
                 <h2 className="text-3xl font-extrabold text-text-main mb-2">
-                  {user.name}
+                  {user.username}
                 </h2>
 
                 {isAdmin ? (
@@ -107,18 +112,9 @@ const ProfilePage = () => {
                 <div className="flex items-center justify-center md:justify-start gap-4 text-text-muted bg-text-main/5 p-3 rounded-xl border border-text-main/5">
                   <UserIcon size={20} className="text-text-main/60" />
                   <span className="text-[15px] font-medium truncate">
-                    {user.nickname || user.given_name || "User Alias"}
+                    {user.username}
                   </span>
                 </div>
-
-                {user.updated_at && (
-                  <div className="flex items-center justify-center md:justify-start gap-4 text-text-muted bg-text-main/5 p-3 rounded-xl border border-text-main/5">
-                    <Calendar size={20} className="text-text-main/60" />
-                    <span className="text-[15px] font-medium truncate">
-                      Last updated: {new Date(user.updated_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
               </div>
 
               <div className="pt-6 border-t border-text-muted/10 flex justify-center md:justify-start">

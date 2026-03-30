@@ -1,15 +1,16 @@
 import axios from 'axios';
-import { store } from '../store/store'; // Adjust path to your Redux store
-import { setCredentials, logout } from '../features/auth/authSlice';
+import { store } from '../store/store'; 
+import { setCredentials, logoutUser } from '../features/auth/authSlice'; 
 
-const axiosAuth = axios.create({
+const apiClient = axios.create({
   baseURL: 'http://localhost:5000/api',
-  withCredentials: true, // Crucial for sending the HttpOnly refresh cookie
+  withCredentials: true, // Crucial for auth, harmless for public routes
 });
 
-// Request Interceptor: Attach Access Token
-axiosAuth.interceptors.request.use((config) => {
+// Request Interceptor: Attach Access Token if it exists
+apiClient.interceptors.request.use((config) => {
   const token = store.getState().auth.accessToken;
+  // If the user is logged in, attach the token. If not, just send normally.
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -17,33 +18,29 @@ axiosAuth.interceptors.request.use((config) => {
 }, (error) => Promise.reject(error));
 
 // Response Interceptor: Handle Expired Tokens
-axiosAuth.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If error is 401 (Unauthorized) and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        // Ask backend for a new access token
         const response = await axios.post('http://localhost:5000/api/auth/refresh', {}, { withCredentials: true });
         
         const newAccessToken = response.data.accessToken;
+        const currentUser = response.data.user || store.getState().auth.user; 
         
-        // Update Redux with new token
         store.dispatch(setCredentials({ 
-          user: store.getState().auth.user, 
+          user: currentUser, 
           accessToken: newAccessToken 
         }));
 
-        // Retry the original request with the new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return axiosAuth(originalRequest);
+        return apiClient(originalRequest);
       } catch (refreshError) {
-        // If refresh fails (e.g., refresh token expired), log them out completely
-        store.dispatch(logout());
+        store.dispatch(logoutUser());
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -52,4 +49,4 @@ axiosAuth.interceptors.response.use(
   }
 );
 
-export default axiosAuth;
+export default apiClient;

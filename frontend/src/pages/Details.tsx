@@ -1,79 +1,27 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { tmdbApi } from '../api/tmdb';
 import { deleteMedia } from '../features/media/mediaSlice';
 import { toggleFavorite } from '../features/favorites/favoritesSlice';
-import { useAuth0 } from '@auth0/auth0-react';
 import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
 import { useTheme } from '../context/ThemeContext'; 
+import apiClient from '../api/apiClient';
 
 // --- TYPESCRIPT INTERFACES ---
-interface CastMember {
-  id: number;
-  name: string;
-  character?: string;
-  profile_path?: string | null;
-}
+interface CastMember { id: number; name: string; character?: string; profile_path?: string | null; }
+interface CrewMember { id: number; name: string; job: string; department?: string; profile_path?: string | null; }
+interface ProductionCompany { id: number; name: string; logo_path?: string | null; }
+interface ProductionCountry { iso_3166_1: string; name: string; }
+interface SpokenLanguage { iso_639_1: string; name: string; english_name: string; }
+interface Creator { id: number; name: string; profile_path?: string | null; }
+interface Season { id: number; name: string; air_date: string; overview: string; poster_path: string | null; vote_average: number; episode_count: number; season_number: number; }
+interface Network { id: number; name: string; logo_path: string | null; origin_country: string; }
 
-interface CrewMember {
-  id: number;
-  name: string;
-  job: string;
-  department?: string;
-  profile_path?: string | null;
-}
-
-interface ProductionCompany {
-  id: number;
-  name: string;
-  logo_path?: string | null;
-}
-
-interface ProductionCountry {
-  iso_3166_1: string;
-  name: string;
-}
-
-interface SpokenLanguage {
-  iso_639_1: string;
-  name: string;
-  english_name: string;
-}
-
-interface Creator {
-  id: number;
-  name: string;
-  profile_path?: string | null;
-}
-
-interface Season {
-  id: number;
-  name: string;
-  air_date: string;
-  overview: string;
-  poster_path: string | null;
-  vote_average: number;
-  episode_count: number;
-  season_number: number;
-}
-
-interface Network {
-  id: number;
-  name: string;
-  logo_path: string | null;
-  origin_country: string;
-}
-
-// Extended media type to include the deep data from PostgreSQL/TMDB
 interface ExtendedMedia extends Media {
   type?: 'movie' | 'tv';
-  credits?: {
-    cast?: CastMember[];
-    crew?: CrewMember[];
-  };
+  credits?: { cast?: CastMember[]; crew?: CrewMember[]; };
   created_by?: Creator[];
   number_of_seasons?: number;
   number_of_episodes?: number;
@@ -89,16 +37,16 @@ interface ExtendedMedia extends Media {
   first_air_date?: string;
   last_air_date?: string;
 }
-// ----------------------------------------
 
 const Details = () => {
   const { id: paramId, type: paramType } = useParams<{ id: string; type: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { user } = useAuth0();
   const { theme } = useTheme(); 
   
-  const isAdmin = user?.email === 'abhijithksd23@gmail.com';
+  // REDUX AUTHENTICATION CHECK
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const isAdmin = user?.is_admin === true;
 
   const id = paramId || '';
   const type = paramType || '';
@@ -114,7 +62,6 @@ const Details = () => {
   const [tmdbMedia, setTmdbMedia] = useState<Media | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Find the media in Redux, prioritizing edits and favorites first
   const reduxMedia: Media | undefined = useMemo(() => {
     return editedMedia.find((m) => String(m.id) === id) ||
            customMovies.find((m) => String(m.id) === id) ||
@@ -124,7 +71,6 @@ const Details = () => {
            tvShows.find((m) => String(m.id) === id);
   }, [id, editedMedia, customMovies, favorites, trending, movies, tvShows]);
 
-  // Merge DB data and Local data (Local data ALWAYS wins)
   const media: Media | null = useMemo(() => {
     if (reduxMedia && tmdbMedia) {
       return {
@@ -140,29 +86,18 @@ const Details = () => {
     return favorites.some((item) => String(item.id) === String(id));
   }, [favorites, id]);
 
-  // API Gatekeeper Logic
   const isCustom = String(id).startsWith('custom-');
   const hasFullData = Boolean(reduxMedia?.genres?.length);
   const hasLocalData = Boolean(reduxMedia);
 
   useEffect(() => {
     if (!id || !type) return;
-    
-    if (isCustom || hasFullData) {
-      return;
-    }
+    if (isCustom || hasFullData) return;
 
     let canceled = false;
-    tmdbApi
-      .get<Media>(`/media/${type}/${id}`)
-      .then((res) => {
-        if (!canceled) setTmdbMedia(res.data);
-      })
-      .catch(() => {
-        if (!canceled && !hasLocalData) {
-          navigate('/');
-        }
-      });
+    apiClient.get<Media>(`/media/${type}/${id}`)
+      .then((res) => { if (!canceled) setTmdbMedia(res.data); })
+      .catch(() => { if (!canceled && !hasLocalData) navigate('/'); });
 
     return () => { canceled = true; };
   }, [id, type, isCustom, hasFullData, hasLocalData, navigate]);
@@ -178,10 +113,7 @@ const Details = () => {
     );
   }
 
-  // --- HELPER FUNCTIONS ---
-  const isValidAbsoluteUrl = (path: string) => 
-    path.startsWith('http') || path.startsWith('data:image/') || path.startsWith('blob:');
-
+  const isValidAbsoluteUrl = (path: string) => path.startsWith('http') || path.startsWith('data:image/') || path.startsWith('blob:');
   const getImageUrl = (path?: string | null, size: string = 'w500', isProfile: boolean = false) => {
     if (!path) return isProfile ? `https://ui-avatars.com/api/?name=N+A&background=random` : '/placeholder.jpg';
     if (isValidAbsoluteUrl(path)) return path;
@@ -191,11 +123,7 @@ const Details = () => {
   const posterUrl = getImageUrl(media.poster_path, 'w500');
   const backdropUrl = getImageUrl(media.backdrop_path, 'original');
 
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return 'N/A';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
-  };
-
+  const formatCurrency = (amount?: number) => amount ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount) : 'N/A';
   const formatRuntime = (minutes?: number) => {
     if (!minutes) return null;
     const h = Math.floor(minutes / 60);
@@ -206,9 +134,7 @@ const Details = () => {
   const getReleaseYearString = (media: ExtendedMedia) => {
     if (media.type === 'tv' || media.first_air_date) {
         const start = media.first_air_date?.substring(0, 4) || '';
-        const end = media.status === 'Ended' && media.last_air_date 
-            ? media.last_air_date.substring(0, 4) 
-            : '';
+        const end = media.status === 'Ended' && media.last_air_date ? media.last_air_date.substring(0, 4) : '';
         return start && end && start !== end ? `${start} - ${end}` : start || 'TBA';
     }
     return media.release_date?.substring(0, 4) || 'TBA';
@@ -229,14 +155,17 @@ const Details = () => {
   };
 
   const handleFavoriteToggle = () => {
+    if (!isAuthenticated) {
+      toast.error("You must be logged in to add favorites!");
+      navigate('/login');
+      return;
+    }
     dispatch(toggleFavorite(media));
   };
 
-  // EXTRACTING DEEP DATA TYPE-SAFELY
   const mediaData = media as ExtendedMedia;
   const topCast = mediaData.credits?.cast?.slice(0, 10) || [];
   const seasons = mediaData.seasons?.filter(s => s.season_number > 0) || []; 
-  
   const director = mediaData.credits?.crew?.find((c) => c.job === 'Director')?.name;
   const screenplayWriters = mediaData.credits?.crew?.filter((c) => c.job === 'Screenplay' || c.job === 'Writer').map(c => c.name).join(', ');
   const creators = mediaData.created_by?.map((c) => c.name).join(', ');
@@ -246,10 +175,7 @@ const Details = () => {
       <div className="bg-main min-h-screen text-text-main pb-20 -mt-20 md:-mt-24 transition-colors duration-300">
         <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
           {backdropUrl !== '/placeholder.jpg' ? (
-            <div 
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 hover:scale-105"
-              style={{ backgroundImage: `url(${backdropUrl})` }}
-            />
+            <div className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 hover:scale-105" style={{ backgroundImage: `url(${backdropUrl})` }} />
           ) : (
             <div className="absolute inset-0 bg-main/20" />
           )}
@@ -258,14 +184,8 @@ const Details = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 -mt-72 md:-mt-96 relative z-10 flex flex-col md:flex-row gap-8 md:gap-16">
-          
-          {/* LEFT SIDEBAR: Poster & Actions */}
           <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 flex flex-col items-center">
-            <img
-              src={posterUrl}
-              alt={media.title || media.name}
-              className="w-64 md:w-full rounded-2xl shadow-2xl shadow-main/80 border border-text-muted/20 object-cover"
-            />
+            <img src={posterUrl} alt={media.title || media.name} className="w-64 md:w-full rounded-2xl shadow-2xl shadow-main/80 border border-text-muted/20 object-cover" />
             
             <div className="w-full mt-4 flex justify-center gap-4">
                {mediaData.homepage && (
@@ -284,9 +204,7 @@ const Details = () => {
             <div className="w-full mt-6 flex justify-center items-center gap-6">
               <button
                 onClick={handleFavoriteToggle}
-                className={`transition-all duration-300 hover:scale-110 active:scale-90 focus:outline-none p-3 rounded-full ${
-                    isFavorited ? 'bg-btn-bg/10' : 'hover:bg-text-muted/10'
-                }`}
+                className={`transition-all duration-300 hover:scale-110 active:scale-90 focus:outline-none p-3 rounded-full ${isFavorited ? 'bg-btn-bg/10' : 'hover:bg-text-muted/10'}`}
                 title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill={isFavorited ? "currentColor" : "none"} viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={`w-10 h-10 transition-colors ${isFavorited ? 'text-btn-bg' : 'text-text-main'}`}>
@@ -294,6 +212,7 @@ const Details = () => {
                 </svg>
               </button>
 
+              {/* ONLY ADMIN CAN SEE EDIT AND DELETE BUTTONS */}
               {isAdmin && (
                 <div className="flex justify-center items-center gap-4 border-l pl-6 border-text-muted/30">
                   <button onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })} className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300">
@@ -307,17 +226,9 @@ const Details = () => {
             </div>
           </div>
 
-          {/* RIGHT SIDEBAR: Content */}
           <div className="flex-1 mt-8 md:mt-16 overflow-hidden">
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md text-text-main">
-              {media.title || media.name}
-            </h1>
-            
-            {media.tagline && (
-              <p className="text-xl md:text-2xl text-text-muted italic mb-6 font-light">
-                "{media.tagline}"
-              </p>
-            )}
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md text-text-main">{media.title || media.name}</h1>
+            {media.tagline && <p className="text-xl md:text-2xl text-text-muted italic mb-6 font-light">"{media.tagline}"</p>}
 
             <div className="flex flex-wrap items-center gap-4 mb-8 text-sm md:text-base font-medium">
               {media.vote_average !== undefined && media.vote_average > 0 && (
@@ -326,70 +237,35 @@ const Details = () => {
                   {Number(media.vote_average).toFixed(1)} <span className="text-yellow-500/50 text-xs ml-1">({media.vote_count})</span>
                 </div>
               )}
-              
-              <span className="text-text-muted font-bold tracking-wider">
-                {getReleaseYearString(mediaData)}
-              </span>
-              
-              {formatRuntime(media.runtime) && (
-                <>
-                  <span className="text-text-muted/50">•</span>
-                  <span className="text-text-muted">{formatRuntime(media.runtime)}</span>
-                </>
-              )}
-
-              {media.status && (
-                <>
-                   <span className="text-text-muted/50">•</span>
-                   <span className="text-text-muted bg-text-muted/10 px-2 py-0.5 rounded">{media.status}</span>
-                </>
-              )}
-
-              {mediaData.original_language && (
-                <>
-                  <span className="text-text-muted/50">•</span>
-                  <span className="uppercase text-text-muted border border-text-muted/30 px-2 py-0.5 rounded text-xs tracking-widest">
-                    {mediaData.original_language}
-                  </span>
-                </>
-              )}
+              <span className="text-text-muted font-bold tracking-wider">{getReleaseYearString(mediaData)}</span>
+              {formatRuntime(media.runtime) && <><span className="text-text-muted/50">•</span><span className="text-text-muted">{formatRuntime(media.runtime)}</span></>}
+              {media.status && <><span className="text-text-muted/50">•</span><span className="text-text-muted bg-text-muted/10 px-2 py-0.5 rounded">{media.status}</span></>}
+              {mediaData.original_language && <><span className="text-text-muted/50">•</span><span className="uppercase text-text-muted border border-text-muted/30 px-2 py-0.5 rounded text-xs tracking-widest">{mediaData.original_language}</span></>}
             </div>
 
             {media.genres && media.genres.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-10">
                 {media.genres.map((g) => (
-                  <span key={g.id} className="bg-btn-bg/10 text-btn-bg border border-btn-bg/30 px-4 py-1.5 rounded-full text-sm font-medium tracking-wide">
-                    {g.name}
-                  </span>
+                  <span key={g.id} className="bg-btn-bg/10 text-btn-bg border border-btn-bg/30 px-4 py-1.5 rounded-full text-sm font-medium tracking-wide">{g.name}</span>
                 ))}
               </div>
             )}
 
             <div className="mb-12">
               <h3 className="text-xl font-bold text-text-main mb-4">Overview</h3>
-              <p className="text-text-muted text-lg leading-relaxed max-w-4xl">
-                {media.overview || 'No overview available.'}
-              </p>
+              <p className="text-text-muted text-lg leading-relaxed max-w-4xl">{media.overview || 'No overview available.'}</p>
             </div>
 
-            {/* CAST SECTION */}
             {topCast.length > 0 && (
               <div className="mb-12">
                 <h3 className="text-xl font-bold text-text-main mb-6 border-b border-text-muted/20 pb-2 inline-block">Top Cast</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {topCast.map((actor) => (
                     <div key={actor.id} className="flex flex-col bg-card-bg/30 border border-text-muted/10 rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-btn-bg/10">
-                      <img 
-                        src={getImageUrl(actor.profile_path, 'w200', true)} 
-                        alt={actor.name}
-                        className="w-full h-40 object-cover bg-main/50"
-                        loading="lazy"
-                      />
+                      <img src={getImageUrl(actor.profile_path, 'w200', true)} alt={actor.name} className="w-full h-40 object-cover bg-main/50" loading="lazy" />
                       <div className="p-3 text-center flex-1 flex flex-col justify-center">
                         <p className="text-text-main font-bold text-sm line-clamp-1">{actor.name}</p>
-                        {actor.character && (
-                          <p className="text-text-muted text-xs mt-1 line-clamp-2 italic">{actor.character}</p>
-                        )}
+                        {actor.character && <p className="text-text-muted text-xs mt-1 line-clamp-2 italic">{actor.character}</p>}
                       </div>
                     </div>
                   ))}
@@ -397,25 +273,17 @@ const Details = () => {
               </div>
             )}
 
-            {/* SEASONS SECTION (TV SHOWS ONLY) - NOW A GRID */}
             {seasons.length > 0 && (
               <div className="mb-12">
                 <h3 className="text-xl font-bold text-text-main mb-6 border-b border-text-muted/20 pb-2 inline-block">Seasons</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {seasons.map((season) => (
                     <div key={season.id} className="flex flex-col bg-card-bg/30 border border-text-muted/10 rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-btn-bg/10">
-                      <img 
-                        src={getImageUrl(season.poster_path, 'w200')} 
-                        alt={season.name}
-                        className="w-full h-48 sm:h-56 object-cover bg-main/50"
-                        loading="lazy"
-                      />
+                      <img src={getImageUrl(season.poster_path, 'w200')} alt={season.name} className="w-full h-48 sm:h-56 object-cover bg-main/50" loading="lazy" />
                       <div className="p-3 text-center flex-1 flex flex-col justify-center">
                         <p className="text-text-main font-bold text-sm line-clamp-1">{season.name}</p>
                         <p className="text-text-muted text-xs mt-1">{season.episode_count} Episodes</p>
-                        {season.air_date && (
-                          <p className="text-text-muted/60 text-xs mt-0.5">{season.air_date.substring(0, 4)}</p>
-                        )}
+                        {season.air_date && <p className="text-text-muted/60 text-xs mt-0.5">{season.air_date.substring(0, 4)}</p>}
                       </div>
                     </div>
                   ))}
@@ -423,9 +291,7 @@ const Details = () => {
               </div>
             )}
 
-            {/* STATS & CREW GRID */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-y-8 gap-x-6 pt-8 border-t border-text-muted/20">
-              
               {director ? (
                 <div>
                   <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-1">Director</h4>
@@ -445,7 +311,6 @@ const Details = () => {
                 </div>
               )}
 
-              {/* Financials vs TV Stats */}
               {mediaData.type === 'tv' || mediaData.number_of_seasons ? (
                 <>
                   {(mediaData.number_of_seasons ?? 0) > 0 && (
@@ -479,59 +344,46 @@ const Details = () => {
               )}
             </div>
 
-            {/* COMPANIES, NETWORKS & LOCATIONS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 mt-8 border-t border-text-muted/20">
-              
               <div className="flex flex-col gap-6">
                 {mediaData.networks && mediaData.networks.length > 0 && (
                   <div>
                     <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Networks</h4>
                     <div className="flex flex-wrap gap-2">
                       {mediaData.networks.map((network) => (
-                        <span key={network.id} className="text-text-main text-xs font-medium bg-btn-bg/10 text-btn-bg border border-btn-bg/20 px-3 py-1.5 rounded-md">
-                          {network.name}
-                        </span>
+                        <span key={network.id} className="text-text-main text-xs font-medium bg-btn-bg/10 text-btn-bg border border-btn-bg/20 px-3 py-1.5 rounded-md">{network.name}</span>
                       ))}
                     </div>
                   </div>
                 )}
-
                 {mediaData.production_companies && mediaData.production_companies.length > 0 && (
                   <div>
                     <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Production Companies</h4>
                     <div className="flex flex-wrap gap-2">
                       {mediaData.production_companies.map((company) => (
-                        <span key={company.id} className="text-text-main text-xs bg-text-muted/10 border border-text-muted/20 px-3 py-1.5 rounded-md">
-                          {company.name}
-                        </span>
+                        <span key={company.id} className="text-text-main text-xs bg-text-muted/10 border border-text-muted/20 px-3 py-1.5 rounded-md">{company.name}</span>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-
               {(mediaData.spoken_languages || mediaData.production_countries) && (
                 <div className="flex flex-col gap-6">
                   {mediaData.production_countries && mediaData.production_countries.length > 0 && (
                     <div>
                       <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-2">Filming Locations</h4>
-                      <p className="text-text-main text-sm font-medium">
-                        {mediaData.production_countries.map(c => c.name).join(', ')}
-                      </p>
+                      <p className="text-text-main text-sm font-medium">{mediaData.production_countries.map(c => c.name).join(', ')}</p>
                     </div>
                   )}
                   {mediaData.spoken_languages && mediaData.spoken_languages.length > 0 && (
                     <div>
                       <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-2">Spoken Languages</h4>
-                      <p className="text-text-main text-sm font-medium">
-                        {mediaData.spoken_languages.map(l => l.english_name).join(', ')}
-                      </p>
+                      <p className="text-text-main text-sm font-medium">{mediaData.spoken_languages.map(l => l.english_name).join(', ')}</p>
                     </div>
                   )}
                 </div>
               )}
             </div>
-            
           </div>
         </div>
       </div>
@@ -540,16 +392,10 @@ const Details = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
           <div className="bg-card-bg border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl transform scale-100 transition-all duration-300">
             <h2 className="text-2xl font-bold text-text-main mb-4">Delete Media</h2>
-            <p className="text-text-muted mb-8">
-              Are you sure you want to delete <span className="font-semibold text-text-main">"{media.title || media.name}"</span>? This action cannot be undone.
-            </p>
+            <p className="text-text-muted mb-8">Are you sure you want to delete <span className="font-semibold text-text-main">"{media.title || media.name}"</span>? This action cannot be undone.</p>
             <div className="flex gap-4 justify-end">
-              <button onClick={() => setShowDeleteModal(false)} className="px-6 py-2.5 rounded-xl font-semibold bg-text-muted/20 text-text-main hover:bg-text-muted/30 transition-colors">
-                Cancel
-              </button>
-              <button onClick={confirmDelete} className="px-6 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 transition-all">
-                Yes, Delete
-              </button>
+              <button onClick={() => setShowDeleteModal(false)} className="px-6 py-2.5 rounded-xl font-semibold bg-text-muted/20 text-text-main hover:bg-text-muted/30 transition-colors">Cancel</button>
+              <button onClick={confirmDelete} className="px-6 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 transition-all">Yes, Delete</button>
             </div>
           </div>
         </div>

@@ -3,9 +3,9 @@ import { LogOut } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import axios from "axios";
 import toast from "react-hot-toast";
-import { logout } from "../../features/auth/authSlice";
+import { logoutUser } from "../../features/auth/authSlice";
+import type { AppDispatch } from "../../store/store"; // Import your AppDispatch
 
 interface LogoutModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface LogoutModalProps {
 }
 
 const LogoutModal = ({ isOpen, onClose }: LogoutModalProps) => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -23,27 +23,13 @@ const LogoutModal = ({ isOpen, onClose }: LogoutModalProps) => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     
-    try {
-      // 1. Tell the backend to clear the HTTP-Only refresh token cookie
-      await axios.post(
-        "http://localhost:5000/api/auth/logout",
-        {},
-        { withCredentials: true }
-      );
-    } catch (error) {
-      console.error("Backend logout failed, but clearing local state anyway.", error);
-    } finally {
-      // 2. Clear the Redux store (removes user data and access token)
-      dispatch(logout());
-      
-      // 3. Show a nice toast notification
-      toast.success("Logged out successfully");
-      
-      // 4. Close the modal and redirect to the home page
-      onClose();
-      navigate("/");
-      setIsLoggingOut(false);
-    }
+    // We dispatch the thunk. Redux handles the API call and the state wipe automatically.
+    await dispatch(logoutUser());
+    
+    setIsLoggingOut(false);
+    toast.success("Logged out successfully");
+    onClose();
+    navigate("/");
   };
 
   return (
