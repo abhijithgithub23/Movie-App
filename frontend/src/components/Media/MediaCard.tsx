@@ -11,12 +11,15 @@ interface MediaCardProps {
 const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
   const dispatch = useDispatch();
   
-  // Helper function to handle TMDB paths, HTTP links, Base64 (data:), and local blob URLs
+  // THE FIX: We absolutely need this helper! 
+  // It handles existing DB paths (TMDB CDN) AND your new Base64 custom uploads.
   const getPosterUrl = (path?: string) => {
     if (!path) return null;
+    // If it's a custom upload (Base64) or an absolute HTTP link, use it directly
     if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("blob:")) {
       return path;
     }
+    // If it's a relative path from the DB, point it to the TMDB image servers
     const tmdbPath = path.startsWith('/') ? path : `/${path}`;
     return `https://image.tmdb.org/t/p/w500${tmdbPath}`;
   };
@@ -26,7 +29,9 @@ const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
   const title = media.title || media.name;
   const mediaType = media.media_type || 'movie';
   const year = (media.release_date || media.first_air_date)?.substring(0, 4) || 'N/A';
-  const rating = media.vote_average?.toFixed(1);
+  
+  const rawRating = Number(media.vote_average);
+  const rating = !isNaN(rawRating) && rawRating > 0 ? rawRating.toFixed(1) : null;
 
   return (
     <div className="group relative bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 hover:border-red-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-red-500/20 flex flex-col h-full">
@@ -64,7 +69,7 @@ const MediaCard = ({ media, isAdmin = false }: MediaCardProps) => {
           
           {/* Stats Row */}
           <div className="flex items-center gap-3 mt-3 text-xs font-medium text-gray-400">
-            {rating && Number(rating) > 0 ? (
+            {rating ? (
               <span className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">
                 ★ {rating}
               </span>

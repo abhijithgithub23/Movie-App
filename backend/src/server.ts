@@ -1,10 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import mediaRoutes from './routes/media.routes';
 import { initializeDatabase } from './config/initDb';
 import cookieParser from 'cookie-parser';
-import authRoutes from './routes/auth.routes'; 
+
+import mediaRoutes from './routes/media.routes';
+import authRoutes from './routes/auth.routes';
+import favoritesRoutes from './routes/favorites.routes';
+
 
 dotenv.config();
 
@@ -21,6 +24,7 @@ app.use(express.json());
 // Routes
 app.use('/api/media', mediaRoutes);
 app.use('/api/auth', authRoutes); 
+app.use('/api/favorites', favoritesRoutes);
 
 
 

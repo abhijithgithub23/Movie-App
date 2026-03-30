@@ -1,33 +1,42 @@
-// src/pages/Favorites.tsx
-import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { useEffect, useMemo } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
-import type { RootState } from '../store/store';
+import type { RootState, AppDispatch } from '../store/store';
+import { fetchFavorites } from '../features/favorites/favoritesSlice';
 import MediaCard from '../components/Media/MediaCard';
 
 const Favorites = () => {
-  const { items: favorites } = useSelector((state: RootState) => state.favorites);
-  
-  // 1. Pull the edited media from your media slice
+  const dispatch = useDispatch<AppDispatch>();
+  const { items: favorites, status } = useSelector((state: RootState) => state.favorites);
   const editedMedia = useSelector((state: RootState) => state.media.edited);
-  
-  const isRehydrated = useSelector((state: RootState) => state.favorites._persist?.rehydrated);
 
-  // 2. Merge edits into favorites dynamically
+  // Fetch favorites from database on mount, ONLY if we haven't already!
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchFavorites());
+    }
+  }, [dispatch, status]);
+
+ 
+
   const displayFavorites = useMemo(() => {
     return favorites.map(fav => {
-      // Find if this favorite item has been edited
       const editedItem = editedMedia.find(e => String(e.id) === String(fav.id));
-      // If it has, merge the edits over the original favorite data
       return editedItem ? { ...fav, ...editedItem } : fav;
-    }).reverse(); // Keep newest favorites at the top
+    }); 
   }, [favorites, editedMedia]);
 
-  if (!isRehydrated) {
-    return <div className="min-h-screen bg-main transition-colors duration-300" />; 
+  // Show a spinner while the database is being queried
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-main transition-colors duration-300">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-btn-bg"></div>
+      </div>
+    );
   }
 
-  if (displayFavorites.length === 0) {
+  // Show the empty state if the DB returns nothing
+  if (displayFavorites.length === 0 && (status === 'succeeded' || status === 'idle')) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[calc(100vh-80px)] bg-main px-6 pt-20 transition-colors duration-300">
         <div className="bg-card-bg/50 p-10 rounded-3xl shadow-2xl shadow-btn-bg/10 max-w-md w-full text-center border border-text-muted/20 backdrop-blur-md transition-colors duration-300">
@@ -58,6 +67,7 @@ const Favorites = () => {
     );
   }
 
+  // Render the grid if favorites exist
   return (
     <div className="min-h-screen bg-main pt-24 pb-12 px-6 md:px-12 transition-colors duration-300">
       <div className="max-w-[1400px] mx-auto w-full">
@@ -80,7 +90,6 @@ const Favorites = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-          {/* 3. Use the merged displayFavorites array here */}
           {displayFavorites.map((media) => (
             <MediaCard 
               key={media.id} 

@@ -166,7 +166,6 @@ export const searchMediaDB = async (
   }
 
   if (filters.genre) {
-    // FIX: Use the mapping dictionary to automatically grab all related IDs
     const targetGenres = getRelatedGenreIds(filters.genre);
     
     queryText += ` AND EXISTS (

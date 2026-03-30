@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { deleteMedia } from '../features/media/mediaSlice';
-import { toggleFavorite } from '../features/favorites/favoritesSlice';
+import { toggleFavoriteAsync } from '../features/favorites/favoritesSlice';
 import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
@@ -160,7 +160,16 @@ const Details = () => {
       navigate('/login');
       return;
     }
-    dispatch(toggleFavorite(media));
+    
+    // We send the full media object to the backend so it can save it in the JSONB column
+    dispatch(toggleFavoriteAsync(mediaData));
+    
+    // Optional: Show a toast based on whether we are adding or removing
+    if (isFavorited) {
+      toast.success("Removed from favorites", { icon: '💔' });
+    } else {
+      toast.success("Added to favorites!", { icon: '❤️' });
+    }
   };
 
   const mediaData = media as ExtendedMedia;
