@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
-import apiClient from "../../api/apiClient"; // <--- UPDATED IMPORT
+import apiClient from "../../api/apiClient"; 
 import type { Media } from "../../types";
 
 interface MediaState {
