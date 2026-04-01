@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { checkAuth } from "../features/auth/authSlice";
 import { fetchFavorites } from "../features/favorites/favoritesSlice"; 
@@ -26,10 +26,17 @@ const SignupPage = lazy(() => import("../pages/SignupPage"));
 
 export default function AppRoutes() {
   const dispatch = useDispatch<AppDispatch>();
-  const { status, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  
+  // NEW: Local state to track if the initial authentication check is completely done
+  const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
-    dispatch(checkAuth());
+    // Fire the checkAuth thunk, and NO MATTER WHAT HAPPENS (success or fail),
+    // mark the app as ready so the router can finally mount.
+    dispatch(checkAuth()).finally(() => {
+      setIsAppReady(true);
+    });
   }, [dispatch]);
 
   useEffect(() => {
@@ -38,9 +45,9 @@ export default function AppRoutes() {
     }
   }, [isAuthenticated, dispatch]);
 
-  // THE FIX: Block the render if status is 'idle' OR 'loading'
-  // This prevents ProtectedRoutes from prematurely kicking the user out before checkAuth runs!
-  if (status === 'idle' || status === 'loading') {
+  // THE FIX: We only block the render while the initial auth check is running!
+  // Once it's done, we let the Router handle everything (including kicking logged-out users).
+  if (!isAppReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-main">
         <LoadingSpinner />
