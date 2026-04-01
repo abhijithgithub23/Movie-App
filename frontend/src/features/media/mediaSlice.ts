@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
+import axios from "axios";
 import apiClient from "../../api/apiClient"; 
 import type { Media } from "../../types";
 
@@ -38,11 +39,26 @@ const initialState: MediaState = {
 // Thunks
 // -----------------------------
 
+export const addMediaAsync = createAsyncThunk<Media, Partial<Media>>(
+  "media/addMedia",
+  async (mediaData, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.post('/media', mediaData);
+      return response.data; 
+    } catch (error: unknown) { // FIX: Strict typing for error
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to add media');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
 // Trending
 export const getTrending = createAsyncThunk<Media[]>(
   "media/getTrending",
   async () => {
-    const res = await apiClient.get("/media/trending"); // <--- UPDATED
+    const res = await apiClient.get("/media/trending"); 
     return res.data.results; 
   }
 );
@@ -52,7 +68,7 @@ export const getMovies = createAsyncThunk<{ results: Media[]; page: number }, nu
   "media/getMovies",
   async (pageArg) => {
     const page = typeof pageArg === "number" ? pageArg : 1;
-    const res = await apiClient.get("/media/movies", { params: { page } }); // <--- UPDATED
+    const res = await apiClient.get("/media/movies", { params: { page } }); 
     return { results: res.data.results, page };
   }
 );
@@ -62,7 +78,7 @@ export const getTVShows = createAsyncThunk<{ results: Media[]; page: number }, n
   "media/getTVShows",
   async (pageArg) => {
     const page = typeof pageArg === "number" ? pageArg : 1;
-    const res = await apiClient.get("/media/tv", { params: { page } }); // <--- UPDATED
+    const res = await apiClient.get("/media/tv", { params: { page } }); 
     return { results: res.data.results, page };     
   }
 );
@@ -79,7 +95,7 @@ export interface SearchFilters {
 export const searchMediaThunk = createAsyncThunk(
   'media/search',
   async ({ query, filters }: { query: string; filters?: SearchFilters }) => {
-    const response = await apiClient.get('/media/search', { // <--- UPDATED
+    const response = await apiClient.get('/media/search', { 
       params: {
         query,
         ...filters
@@ -97,19 +113,6 @@ const mediaSlice = createSlice({
   name: "media",
   initialState,
   reducers: {
-    addMedia: (state, action: PayloadAction<Media>) => {
-      const newMedia: Media = {
-        ...action.payload,
-        id: `custom-${Date.now()}`,
-        isCustom: true,
-      };
-      state.customMovies.unshift(newMedia);
-      state.edited.push(newMedia);
-
-      if (newMedia.media_type === 'tv') state.tvShows.unshift(newMedia);
-      else state.movies.unshift(newMedia);
-    },
-
     editMedia: (state, action: PayloadAction<Media>) => {
       const media = action.payload;
       const keys: Array<"trending" | "movies" | "tvShows" | "customMovies"> = [
@@ -160,12 +163,25 @@ const mediaSlice = createSlice({
       let relevantCustom: Media[] = [];
       if (listType !== 'trending' && includeCustom) {
         relevantCustom = state.customMovies.filter((m) => !state.deleted.includes(m.id));
-        if (listType === 'movie') relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie');
-        else if (listType === 'tv') relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv');
+        if (listType === 'movie') relevantCustom = relevantCustom.filter((m) => m.media_type === 'movie' || m.type === 'movie');
+        else if (listType === 'tv') relevantCustom = relevantCustom.filter((m) => m.media_type === 'tv' || m.type === 'tv');
       }
 
       return [...relevantCustom, ...filteredApi];
     };
+
+    // FIX: Must handle addMediaAsync so it shows up in your UI!
+    builder.addCase(addMediaAsync.fulfilled, (state, action) => {
+      const newMedia = action.payload;
+      state.customMovies.unshift(newMedia);
+      
+      const type = newMedia.type || newMedia.media_type;
+      if (type === 'tv') {
+        state.tvShows.unshift(newMedia);
+      } else {
+        state.movies.unshift(newMedia);
+      }
+    });
 
     builder
       .addCase(getTrending.pending, (state) => { state.status.trending = "loading"; })
@@ -215,5 +231,6 @@ const mediaSlice = createSlice({
   },
 });
 
-export const { addMedia, editMedia, deleteMedia, clearSearchResults } = mediaSlice.actions;
+// FIX: Removed `addMedia` from here since it's no longer a synchronous reducer!
+export const { editMedia, deleteMedia, clearSearchResults } = mediaSlice.actions;
 export default mediaSlice.reducer;

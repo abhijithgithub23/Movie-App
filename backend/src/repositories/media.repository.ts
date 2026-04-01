@@ -184,3 +184,45 @@ export const searchMediaDB = async (
   const { rows } = await pool.query(queryText, values);
   return rows;
 };
+
+
+// add-------------------------------------------------------------------------------------------
+
+
+export const insertMedia = async (mediaData: any) => {
+  const nextIdRes = await pool.query('SELECT COALESCE(MAX(tmdb_id), 1000000) + 1 AS next_id FROM media');
+  const syntheticTmdbId = nextIdRes.rows[0].next_id;
+
+  const query = `
+    INSERT INTO media (
+      tmdb_id, type, title, original_name, overview, tagline,
+      release_date, first_air_date, runtime, number_of_seasons, number_of_episodes,
+      vote_average, popularity, poster_path, backdrop_path, genres, spoken_languages
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) RETURNING *;
+  `;
+
+  const values = [
+    syntheticTmdbId,                                 // $1
+    mediaData.type || 'movie',                       // $2
+    mediaData.title || null,                         // $3
+    mediaData.original_name || null,                 // $4
+    mediaData.overview || null,                      // $5
+    mediaData.tagline || null,                       // $6
+    mediaData.release_date || null,                  // $7
+    mediaData.first_air_date || null,                // $8
+    mediaData.runtime || null,                       // $9
+    mediaData.number_of_seasons || null,             // $10
+    mediaData.number_of_episodes || null,            // $11
+    mediaData.vote_average || 0,                     // $12
+    mediaData.popularity || 0,                       // $13 (NEW)
+    mediaData.poster_path || null,                   // $14
+    mediaData.backdrop_path || null,                 // $15
+    mediaData.genres ? JSON.stringify(mediaData.genres) : null,                           // $16
+    mediaData.spoken_languages ? JSON.stringify(mediaData.spoken_languages) : null        // $17
+  ];
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};

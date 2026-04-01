@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { fetchTrendingMedia, fetchMovies, fetchTvShows, fetchMediaDetails, searchMedia } from '../services/media.service';
+import { fetchTrendingMedia, fetchMovies, fetchTvShows, fetchMediaDetails, searchMedia, createMedia, MediaInsertDTO } from '../services/media.service';
 
-export const getTrending = async (req: Request, res: Response) => {
+export const getTrending = async (req: Request, res: Response): Promise<void> => {
   try {
     const data = await fetchTrendingMedia();
     res.status(200).json(data);
@@ -11,9 +11,8 @@ export const getTrending = async (req: Request, res: Response) => {
   }
 };
 
-export const getMovies = async (req: Request, res: Response) => {
+export const getMovies = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Extract page from query, default to 1 if not provided
     const page = parseInt(req.query.page as string) || 1;
     const data = await fetchMovies(page);
     res.status(200).json(data);
@@ -23,7 +22,7 @@ export const getMovies = async (req: Request, res: Response) => {
   }
 };
 
-export const getTvShows = async (req: Request, res: Response) => {
+export const getTvShows = async (req: Request, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const data = await fetchTvShows(page);
@@ -41,15 +40,12 @@ export const getMediaDetails = async (
   try {
     const { type, id } = req.params;
     
-    // Now TypeScript knows 'id' is definitely a string
     const tmdbId = parseInt(id);
-    
     if (isNaN(tmdbId)) {
       res.status(400).json({ message: 'Invalid ID format' });
       return;
     }
 
-    // Now TypeScript knows 'type' is definitely a string
     const details = await fetchMediaDetails(type, tmdbId);
 
     if (!details) {
@@ -63,7 +59,6 @@ export const getMediaDetails = async (
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
 
 export const searchMediaController = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -87,5 +82,26 @@ export const searchMediaController = async (req: Request, res: Response): Promis
   } catch (error) {
     console.error('Error searching media:', error);
     res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const addMedia = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // FIX: Type the incoming request body
+    const mediaData: MediaInsertDTO = req.body;
+    
+    const newMedia = await createMedia(mediaData);
+    
+    res.status(201).json(newMedia);
+  } catch (error: unknown) { // FIX: Replaced 'any' with 'unknown'
+    console.error('Error adding media:', error);
+    
+    // Safely extract the error message
+    let errorMessage = 'Server error creating media';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
+    res.status(500).json({ message: errorMessage });
   }
 };
