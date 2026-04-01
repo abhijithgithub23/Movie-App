@@ -8,6 +8,7 @@ import mediaRoutes from './routes/media.routes';
 import authRoutes from './routes/auth.routes';
 import favoritesRoutes from './routes/favorites.routes';
 import uploadRoutes from './routes/upload.routes';
+import userRoutes from './routes/user.routes';
 
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/auth', authRoutes); 
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/user', userRoutes);
 
 
 

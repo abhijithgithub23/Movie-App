@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit'; 
 import axios from 'axios';
+import apiClient from '../../api/apiClient';
 
 const AUTH_URL = 'http://localhost:5000/api/auth';
 
@@ -66,7 +67,23 @@ export const checkAuth = createAsyncThunk<AuthResponse, void>(
   }
 );
 
-// NEW: Centralized Logout Thunk
+// FIX: Replaced 'any' with the 'User' interface for strict typing
+export const updateProfileAsync = createAsyncThunk<User, { id: number; username: string; profile_pic: string | null }>(
+  'auth/updateProfile',
+  async (profileData, { rejectWithValue }) => {
+    try {
+      // CHANGED: We now hit the isolated User route instead of Auth!
+      const response = await apiClient.put('/user/profile', profileData);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message || 'Failed to update profile');
+      }
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+// Centralized Logout Thunk
 export const logoutUser = createAsyncThunk<void, void>(
   'auth/logout',
   async (_, { rejectWithValue }) => {
@@ -74,7 +91,6 @@ export const logoutUser = createAsyncThunk<void, void>(
       await axios.post(`${AUTH_URL}/logout`, {}, { withCredentials: true });
     } catch (error: unknown) {
       console.error("Backend logout failed", error);
-      // We reject, but the extraReducers will STILL clear the local state for safety.
       return rejectWithValue('Server logout failed');
     }
   }
@@ -157,16 +173,21 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
     });
 
+    // FIX: Handle Profile Update Success
+    // This ensures the React UI updates instantly after a successful edit
+    builder.addCase(updateProfileAsync.fulfilled, (state, action: PayloadAction<User>) => {
+      state.user = action.payload;
+    });
+
     // Handle Logout
     builder.addCase(logoutUser.fulfilled, (state) => {
       state.user = null;
       state.accessToken = null;
       state.isAuthenticated = false;
-      state.status = 'idle'; // Completely resetting the status
+      state.status = 'idle'; 
       state.error = null;
     });
     builder.addCase(logoutUser.rejected, (state) => {
-      // Even if the server crashes, we kick them out on the frontend
       state.user = null;
       state.accessToken = null;
       state.isAuthenticated = false;
@@ -176,5 +197,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials } = authSlice.actions; // Removed synchronous logout
+export const { setCredentials } = authSlice.actions; 
 export default authSlice.reducer;

@@ -17,8 +17,6 @@ const Favorites = () => {
     }
   }, [dispatch, status]);
 
- 
-
   const displayFavorites = useMemo(() => {
     return favorites.map(fav => {
       const editedItem = editedMedia.find(e => String(e.id) === String(fav.id));
