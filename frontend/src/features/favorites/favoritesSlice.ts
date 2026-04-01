@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import apiClient from '../../api/apiClient';
 import { deleteMedia } from '../media/mediaSlice';
-// NEW: Import the auth actions so we can listen for them
+// Import the auth actions so we can listen for them
 import { logoutUser, checkAuth } from '../auth/authSlice'; 
 import type { Media } from '../../types';
 
@@ -37,7 +37,7 @@ export const toggleFavoriteAsync = createAsyncThunk<{ added: boolean, media: Med
   'favorites/toggleFavorite',
   async (media, { rejectWithValue }) => {
     try {
-      // THE FIX: Only send the ID to the backend! No more massive payloads.
+      // Only send the ID to the backend! No more massive payloads.
       const response = await apiClient.post('/favorites/toggle', { id: media.id });
       
       // We still return the full 'media' object here so Redux can instantly update your UI

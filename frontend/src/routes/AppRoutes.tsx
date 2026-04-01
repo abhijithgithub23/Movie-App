@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Suspense, lazy, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { checkAuth } from "../features/auth/authSlice";
+import { fetchFavorites } from "../features/favorites/favoritesSlice"; // NEW: Import the fetch thunk
 import type { AppDispatch, RootState } from "../store/store";
 
 import MainLayout from "../layouts/MainLayout";
@@ -25,12 +26,21 @@ const SignupPage = lazy(() => import("../pages/SignupPage"));
 
 export default function AppRoutes() {
   const dispatch = useDispatch<AppDispatch>();
-  const { status } = useSelector((state: RootState) => state.auth);
+  // NEW: Grab isAuthenticated from the store
+  const { status, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     // Instantly check if the user has a valid HttpOnly cookie when the app loads
     dispatch(checkAuth());
   }, [dispatch]);
+
+  // NEW: Listen for authentication success. 
+  // Whether they just logged in, or the checkAuth() above just finished verifying their cookie, fetch their favorites!
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchFavorites());
+    }
+  }, [isAuthenticated, dispatch]);
 
   // While the backend is verifying the cookie, show a spinner so the UI doesn't flash
   if (status === 'loading') {
