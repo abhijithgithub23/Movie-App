@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getTrending, getMovies, getTvShows, getMediaDetails, searchMediaController, addMedia } from '../controllers/media.controller';
+import { getTrending, getMovies, getTvShows, getMediaDetails, searchMediaController, addMedia, editMediaController, deleteMediaController } from '../controllers/media.controller';
 import { protect } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -14,5 +14,8 @@ router.get('/search', searchMediaController);
 router.get('/:type/:id', getMediaDetails);
 
 router.post('/', protect, addMedia);
+
+router.put('/:id', editMediaController);
+router.delete('/:id', deleteMediaController);
 
 export default router;

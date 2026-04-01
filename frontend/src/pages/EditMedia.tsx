@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { editMedia } from '../features/media/mediaSlice';
+import { editMediaAsync } from '../features/media/mediaSlice';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { tmdbApi } from '../api/tmdb';
 import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
 import type { Media } from '../types';
+import apiClient from '../api/apiClient';
+import axios from 'axios';
 
 type FormData = {
   title: string;
@@ -17,14 +18,30 @@ type FormData = {
   release_date: string;
   runtime: string;
   vote_average: string;
+  popularity: string;
   original_language: string;
   genres: string[];
+  spoken_languages: string[];
 };
 
 const STANDARD_GENRES = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 
   'Horror', 'Romance', 'Sci-Fi', 'Thriller', 'Animation', 
   'Documentary', 'Crime', 'Mystery', 'Family'
+];
+
+const LANGUAGE_OPTIONS = [
+  { iso: 'en', english_name: 'English', name: 'English' },
+  { iso: 'hi', english_name: 'Hindi', name: 'हिन्दी' },
+  { iso: 'es', english_name: 'Spanish', name: 'Español' },
+  { iso: 'fr', english_name: 'French', name: 'Français' },
+  { iso: 'ja', english_name: 'Japanese', name: '日本語' },
+  { iso: 'ko', english_name: 'Korean', name: '한국어/조선말' },
+  { iso: 'it', english_name: 'Italian', name: 'Italiano' },
+  { iso: 'kn', english_name: 'Kannada', name: 'ಕನ್ನಡ' },
+  { iso: 'ml', english_name: 'Malayalam', name: 'മലയാളം' },
+  { iso: 'ta', english_name: 'Tamil', name: 'தமிழ்' },
+  { iso: 'te', english_name: 'Telugu', name: 'తెలుగు' }
 ];
 
 const EditMedia = () => {
@@ -40,19 +57,13 @@ const EditMedia = () => {
 
   const [media, setMedia] = useState<Media | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
-    title: '',
-    tagline: '',
-    overview: '',
-    poster_path: '',
-    backdrop_path: '',     
-    media_type: 'movie',
-    release_date: '',
-    runtime: '',
-    vote_average: '',
-    original_language: 'en',
-    genres: [],
+    title: '', tagline: '', overview: '', poster_path: '', backdrop_path: '',     
+    media_type: 'movie', release_date: '', runtime: '', vote_average: '', popularity: '',
+    original_language: 'en', genres: [], spoken_languages: ['en'],
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -63,12 +74,17 @@ const EditMedia = () => {
     const populateForm = (finalMedia: Media) => {
       setMedia(finalMedia);
 
-      // 1. Updated getFullUrl to recognize existing Base64 strings, Blobs, and standard URLs
       const getFullUrl = (path: string | undefined, size: 'w500' | 'original') => {
         if (!path) return '';
         if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('blob:')) return path;
         return `https://image.tmdb.org/t/p/${size}${path}`;
       };
+
+      // FIX: Safely extract the raw date
+      const rawDate = finalMedia.release_date || finalMedia.first_air_date || '';
+      
+      // FIX: Chop off the time data so the HTML input doesn't crash (takes only the first 10 characters: YYYY-MM-DD)
+      const formattedDate = rawDate ? new Date(rawDate).toISOString().substring(0, 10) : '';
 
       setFormData({
         title: finalMedia.title || finalMedia.name || '',
@@ -77,18 +93,21 @@ const EditMedia = () => {
         poster_path: getFullUrl(finalMedia.poster_path, 'w500'),
         backdrop_path: getFullUrl(finalMedia.backdrop_path, 'original'),
         media_type: finalMedia.media_type || (type as 'movie' | 'tv'),
-        release_date: finalMedia.release_date || finalMedia.first_air_date || '',
+        
+        // Apply the chopped date here!
+        release_date: formattedDate,
+        
         runtime: finalMedia.runtime ? finalMedia.runtime.toString() : '',
         vote_average: finalMedia.vote_average ? finalMedia.vote_average.toString() : '',
+        popularity: finalMedia.popularity ? finalMedia.popularity.toString() : '',
         original_language: finalMedia.original_language || 'en',
         genres: finalMedia.genres ? finalMedia.genres.map((g) => g.name) : [],
+        spoken_languages: finalMedia.spoken_languages ? finalMedia.spoken_languages.map((l) => l.iso_639_1) : ['en'],
       });
-      
       setIsLoading(false);
     };
 
-    const passedMedia = location.state?.fullMedia;
-    
+    const passedMedia = location.state?.fullMedia as Media | undefined;
     if (passedMedia) {
       populateForm(passedMedia);
       return; 
@@ -101,80 +120,55 @@ const EditMedia = () => {
         movies.find((m) => String(m.id) === id) ||
         tvShows.find((m) => String(m.id) === id);
 
-      let finalMedia: Media | null = foundRedux || null;
-
-      if (!id.startsWith('custom-')) {
-        try {
-          const res = await tmdbApi.get<Media>(`/${type}/${id}`);
-          if (foundRedux) {
-            finalMedia = {
-              ...res.data,
-              ...foundRedux,
-              genres: foundRedux.genres?.length ? foundRedux.genres : res.data.genres,
-              runtime: foundRedux.runtime || res.data.runtime,
-            };
-          } else {
-            finalMedia = res.data;
-          }
-        } catch (err) {
-          console.error('Failed to fetch media from TMDB', err);
-          if (!finalMedia) {
-            navigate('/');
-            return;
-          }
-        }
-      }
-
-      if (!finalMedia) {
-        console.error('Media not found');
+      if (foundRedux) {
+        populateForm(foundRedux);
+      } else {
         navigate('/');
-        return;
       }
-
-      populateForm(finalMedia);
     };
 
     fetchMedia();
   }, [id, type, trending, movies, tvShows, customMovies, navigate, location.state]);
 
-  // 2. Updated to validate Base64 image sources as well as standard URLs
   const isValidImageSource = (source: string) => {
     if (source.startsWith('data:image/')) return true;
-    try {
-      new URL(source);
-      return true;
-    } catch {
-      return false;
-    }
+    try { new URL(source); return true; } catch { return false; }
   };
 
-  // 3. Added File Upload Handler logic
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSizeInBytes = 2 * 1024 * 1024; // 2MB limit
-    if (file.size > maxSizeInBytes) {
-      toast.error(`Image is too large. Please select an image under 2MB.`);
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`Image is too large. Please select an image under 10MB.`);
       return;
     }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    
-    reader.onload = () => {
-      const base64String = reader.result as string;
-      setFormData((prev) => ({ ...prev, [fieldName]: base64String }));
+    setIsUploadingImage(true);
+    const toastId = toast.loading('Uploading Image...');
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+
+      const response = await apiClient.post('/upload', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setFormData((prev) => ({ ...prev, [fieldName]: response.data.url }));
+      if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: undefined }));
+      toast.success('Image uploaded securely!', { id: toastId });
       
-      if (errors[fieldName]) {
-        setErrors((prev) => ({ ...prev, [fieldName]: undefined }));
-      }
-    };
-    
-    reader.onerror = (error) => {
-      console.error('Error reading file:', error);
-      toast.error('Failed to process image file.');
-    };
+    } catch (error: unknown) {
+      console.error('Upload Error:', error);
+      let errorMessage = 'Failed to upload image.';
+      if (axios.isAxiosError(error)) errorMessage = error.response?.data?.message || errorMessage;
+      else if (error instanceof Error) errorMessage = error.message;
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = ''; 
+    }
   };
 
   const validateForm = () => {
@@ -182,40 +176,29 @@ const EditMedia = () => {
 
     if (!formData.title.trim()) newErrors.title = 'Title is required';
     if (!formData.overview.trim()) newErrors.overview = 'Overview is required';
-    if (formData.overview.trim().length < 10) newErrors.overview = 'Overview must be at least 10 characters long';
     
-    if (!formData.poster_path.trim()) {
-      newErrors.poster_path = 'Poster Image URL is required';
-    } else if (!isValidImageSource(formData.poster_path)) {
-      newErrors.poster_path = 'Must be a valid URL or uploaded image';
-    }
-
-    if (formData.backdrop_path && !isValidImageSource(formData.backdrop_path)) {
-      newErrors.backdrop_path = 'Must be a valid URL or uploaded image';
-    }
+    if (!formData.poster_path.trim()) newErrors.poster_path = 'Poster Image URL is required';
+    else if (!isValidImageSource(formData.poster_path)) newErrors.poster_path = 'Must be a valid URL';
 
     if (!formData.release_date) newErrors.release_date = 'Release date is required';
     if (formData.genres.length === 0) newErrors.genres = 'Please select at least one genre';
+    if (formData.spoken_languages.length === 0) newErrors.spoken_languages = 'Select at least one language';
 
     if (formData.vote_average) {
       const vote = parseFloat(formData.vote_average);
-      if (isNaN(vote) || vote < 0 || vote > 10) {
-        newErrors.vote_average = 'Rating must be a number between 0 and 10';
-      }
+      if (isNaN(vote) || vote < 0 || vote > 10) newErrors.vote_average = 'Rating must be between 0 and 10';
     }
 
-    if (formData.runtime) {
-      const time = parseInt(formData.runtime, 10);
-      if (isNaN(time) || time <= 0) {
-        newErrors.runtime = 'Runtime must be a valid positive number in minutes';
-      }
+    if (formData.popularity) {
+      const pop = parseFloat(formData.popularity);
+      if (isNaN(pop) || pop < 0) newErrors.popularity = 'Popularity must be a positive number';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!media || !id) return;
 
@@ -224,6 +207,12 @@ const EditMedia = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    setIsSubmitting(true);
+
+    const mappedLanguages = LANGUAGE_OPTIONS
+      .filter(lang => formData.spoken_languages.includes(lang.iso))
+      .map(lang => ({ iso_639_1: lang.iso, english_name: lang.english_name, name: lang.name }));
 
     const updatedMedia: Media = {
       ...media, 
@@ -238,47 +227,50 @@ const EditMedia = () => {
       first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
       runtime: formData.runtime ? parseInt(formData.runtime, 10) : undefined,
       vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
-      original_language: formData.original_language,
+      popularity: formData.popularity ? parseFloat(formData.popularity) : 0,
+      original_language: formData.spoken_languages[0] || 'en',
       genres: formData.genres.map((name, index) => {
         const existing = media.genres?.find(g => g.name === name);
         return existing ? existing : { id: Date.now() + index, name };
       }),
+      spoken_languages: mappedLanguages,
     };
 
     try {
-      dispatch(editMedia(updatedMedia));
-      
-      toast.success(`"${formData.title}" updated successfully!`, {
-        duration: 2000
-      });
-
-      setTimeout(() => {
-        navigate(`/details/${formData.media_type}/${media.id}`);
-      }, 1000);
-
-    } catch (error) {
+      await dispatch(editMediaAsync(updatedMedia)).unwrap();
+      toast.success(`"${formData.title}" updated successfully!`, { duration: 2000 });
+      setTimeout(() => navigate(`/details/${formData.media_type}/${media.id}`), 1000);
+    } catch (error: unknown) {
       console.error("Failed to update media:", error);
-      toast.error('Failed to update media. Please try again.');
+      let errorMessage = 'Failed to update media. Please try again.';
+      if (axios.isAxiosError(error)) errorMessage = error.response?.data?.message || errorMessage;
+      else if (error instanceof Error) errorMessage = error.message;
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const toggleGenre = (genre: string) => {
     setFormData((prev) => {
-      const genres = prev.genres.includes(genre)
-        ? prev.genres.filter((g) => g !== genre)
-        : [...prev.genres, genre];
-      
+      const genres = prev.genres.includes(genre) ? prev.genres.filter((g) => g !== genre) : [...prev.genres, genre];
       if (genres.length > 0) setErrors((errs) => ({ ...errs, genres: undefined }));
       return { ...prev, genres };
+    });
+  };
+
+  const toggleLanguage = (iso: string) => {
+    setFormData((prev) => {
+      const langs = prev.spoken_languages.includes(iso) ? prev.spoken_languages.filter(l => l !== iso) : [...prev.spoken_languages, iso];
+      if (langs.length > 0) setErrors((errs) => ({ ...errs, spoken_languages: undefined }));
+      return { ...prev, spoken_languages: langs };
     });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name as keyof FormData]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
+    if (errors[name as keyof FormData]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const ALL_GENRES = Array.from(new Set([...STANDARD_GENRES, ...formData.genres]));
@@ -299,220 +291,115 @@ const EditMedia = () => {
         
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
           
-          {/* SECTION 1: Basic Information */}
           <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
             <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Basic Information</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-gray-400 font-medium mb-2">Title / Name <span className="text-yellow-500">*</span></label>
-                <input
-                  name="title"
-                  type="text"
-                  placeholder="e.g. The Matrix"
-                  className={`w-full p-3 bg-gray-900 border ${errors.title ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500 transition-colors`}
-                  value={formData.title}
-                  onChange={handleInputChange}
-                />
+                <input name="title" type="text" className={`w-full p-3 bg-gray-900 border ${errors.title ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.title} onChange={handleInputChange} />
                 {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
               </div>
-
               <div>
                 <label className="block text-gray-400 font-medium mb-2">Tagline</label>
-                <input
-                  name="tagline"
-                  type="text"
-                  placeholder="e.g. Welcome to the Real World"
-                  className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500 transition-colors"
-                  value={formData.tagline}
-                  onChange={handleInputChange}
-                />
+                <input name="tagline" type="text" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.tagline} onChange={handleInputChange} />
               </div>
             </div>
 
             <div>
               <label className="block text-gray-400 font-medium mb-2">Overview / Description <span className="text-yellow-500">*</span></label>
-              <textarea
-                name="overview"
-                placeholder="Write a brief synopsis of the movie or show..."
-                rows={5}
-                className={`w-full p-3 bg-gray-900 border ${errors.overview ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500 transition-colors`}
-                value={formData.overview}
-                onChange={handleInputChange}
-              />
+              <textarea name="overview" rows={5} className={`w-full p-3 bg-gray-900 border ${errors.overview ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.overview} onChange={handleInputChange} />
               {errors.overview && <p className="text-red-500 text-sm mt-1">{errors.overview}</p>}
             </div>
           </div>
 
-          {/* SECTION 2: Media Details */}
           <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
              <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Media Details</h3>
              
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Type <span className="text-yellow-500">*</span></label>
-                  <select
-                    name="media_type"
-                    className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500"
-                    value={formData.media_type}
-                    onChange={handleInputChange}
-                  >
+                  <select name="media_type" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.media_type} onChange={handleInputChange}>
                     <option value="movie">Movie</option>
                     <option value="tv">TV Show</option>
                   </select>
                </div>
-
                <div>
                   <label className="block text-gray-400 font-medium mb-2">{formData.media_type === 'tv' ? 'First Air Date' : 'Release Date'} <span className="text-yellow-500">*</span></label>
-                  <input
-                    name="release_date"
-                    type="date"
-                    className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
-                    value={formData.release_date}
-                    onChange={handleInputChange}
-                  />
-                  {errors.release_date && <p className="text-red-500 text-sm mt-1">{errors.release_date}</p>}
+                  <input name="release_date" type="date" className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.release_date} onChange={handleInputChange} />
                </div>
-
-               <div>
-                  <label className="block text-gray-400 font-medium mb-2">Rating (0-10)</label>
-                  <input
-                    name="vote_average"
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    max="10"
-                    placeholder="e.g. 8.5234"
-                    className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
-                    value={formData.vote_average}
-                    onChange={handleInputChange}
-                  />
-                  {errors.vote_average && <p className="text-red-500 text-sm mt-1">{errors.vote_average}</p>}
-               </div>
-
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Runtime (mins)</label>
-                  <input
-                    name="runtime"
-                    type="number"
-                    placeholder="e.g. 120"
-                    className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
-                    value={formData.runtime}
-                    onChange={handleInputChange}
-                  />
-                  {errors.runtime && <p className="text-red-500 text-sm mt-1">{errors.runtime}</p>}
+                  <input name="runtime" type="number" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.runtime} onChange={handleInputChange} />
+               </div>
+               <div>
+                  <label className="block text-gray-400 font-medium mb-2">Rating</label>
+                  <input name="vote_average" type="number" step="0.01" max="10" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.vote_average} onChange={handleInputChange} />
+               </div>
+               <div>
+                  <label className="block text-gray-400 font-medium mb-2">Popularity</label>
+                  <input name="popularity" type="number" step="0.01" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.popularity} onChange={handleInputChange} />
                </div>
              </div>
 
              <div>
                 <label className="block text-gray-400 font-medium mb-3">Genres <span className="text-yellow-500">*</span></label>
                 <div className="flex flex-wrap gap-3">
-                  {ALL_GENRES.map((genre) => {
-                    const isSelected = formData.genres.includes(genre);
-                    return (
-                      <button
-                        type="button"
-                        key={genre}
-                        onClick={() => toggleGenre(genre)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${
-                          isSelected
-                            ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg shadow-yellow-500/30 scale-105'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500 hover:text-white'
-                        }`}
-                      >
-                        {genre}
-                      </button>
-                    );
-                  })}
+                  {ALL_GENRES.map((genre) => (
+                    <button type="button" key={genre} onClick={() => toggleGenre(genre)} className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 border ${formData.genres.includes(genre) ? 'bg-yellow-500 text-black border-yellow-500 shadow-lg shadow-yellow-500/30 scale-105' : 'bg-transparent text-gray-400 border-gray-700 hover:text-white'}`}>
+                      {genre}
+                    </button>
+                  ))}
                 </div>
-                {errors.genres && <p className="text-red-500 text-sm mt-2">{errors.genres}</p>}
+             </div>
+
+             <div className="pt-4 border-t border-gray-800">
+                <label className="block text-gray-400 font-medium mb-3">Spoken Languages <span className="text-yellow-500">*</span></label>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGE_OPTIONS.map((lang) => (
+                    <button type="button" key={lang.iso} onClick={() => toggleLanguage(lang.iso)} className={`px-3 py-1 rounded-full text-sm transition-colors ${formData.spoken_languages.includes(lang.iso) ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+                      {lang.english_name}
+                    </button>
+                  ))}
+                </div>
              </div>
           </div>
 
-          {/* SECTION 3: Images (Now with File Uploads) */}
           <div className="space-y-6 bg-black/40 p-6 rounded-xl border border-gray-800/50">
              <h3 className="text-xl font-bold text-gray-300 uppercase tracking-wider mb-4 border-b border-gray-800 pb-2">Media Assets</h3>
              
-             {/* Poster Upload/URL */}
              <div>
                 <label className="block text-gray-400 font-medium mb-2">Poster Image <span className="text-yellow-500">*</span></label>
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                  <input
-                    name="poster_path"
-                    type="text"
-                    placeholder="Paste image URL here..."
-                    className={`flex-1 p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
-                    value={formData.poster_path}
-                    onChange={handleInputChange}
-                  />
-                  <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
+                  <input name="poster_path" type="text" className="flex-1 p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.poster_path} onChange={handleInputChange} />
+                  <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     Upload File
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => handleFileUpload(e, 'poster_path')}
-                    />
+                    <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'poster_path')} />
                   </label>
                 </div>
-                {errors.poster_path && <p className="text-red-500 text-sm mt-1 mb-4">{errors.poster_path}</p>}
-                
                 {formData.poster_path && isValidImageSource(formData.poster_path) && (
-                  <div className="relative w-32 rounded-lg overflow-hidden border border-gray-700 shadow-xl mt-2">
-                    <img src={formData.poster_path} alt="Poster Preview" className="w-full h-auto object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
-                  </div>
+                  <img src={formData.poster_path} alt="Preview" className="w-32 rounded-lg border border-gray-700 shadow-xl mt-2" />
                 )}
              </div>
 
-             {/* Backdrop Upload/URL */}
              <div className="pt-4 border-t border-gray-800">
                 <label className="block text-gray-400 font-medium mb-2">Background Cover (Optional)</label>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    name="backdrop_path"
-                    type="text"
-                    placeholder="Paste image URL here..."
-                    className={`flex-1 p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-yellow-500`}
-                    value={formData.backdrop_path}
-                    onChange={handleInputChange}
-                  />
-                  <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
+                  <input name="backdrop_path" type="text" className="flex-1 p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.backdrop_path} onChange={handleInputChange} />
+                  <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     Upload File
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => handleFileUpload(e, 'backdrop_path')}
-                    />
+                    <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'backdrop_path')} />
                   </label>
                 </div>
-                {errors.backdrop_path && <p className="text-red-500 text-sm mt-1">{errors.backdrop_path}</p>}
              </div>
           </div>
 
-          {/* Submit Action */}
           <div className="flex justify-end pt-4 border-t border-gray-800 mt-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="px-8 py-4 rounded-xl font-bold text-gray-400 hover:text-white mr-4 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="bg-yellow-500 text-black px-10 py-4 rounded-xl font-bold text-lg hover:bg-yellow-400 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 transition-all duration-300 transform hover:-translate-y-1"
-            >
-              Update Media Database
+            <button type="button" onClick={() => navigate(-1)} className="px-8 py-4 rounded-xl font-bold text-gray-400 hover:text-white mr-4 transition-colors">Cancel</button>
+            <button type="submit" disabled={isSubmitting || isUploadingImage} className="bg-yellow-500 text-black px-10 py-4 rounded-xl font-bold text-lg hover:bg-yellow-400 disabled:opacity-50 transition-all">
+              {isSubmitting ? 'Saving...' : isUploadingImage ? 'Uploading Image...' : 'Update Media Database'}
             </button>
           </div>
-
         </form>
       </div>
     </div>

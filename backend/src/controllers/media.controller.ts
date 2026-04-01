@@ -1,5 +1,14 @@
 import { Request, Response } from 'express';
-import { fetchTrendingMedia, fetchMovies, fetchTvShows, fetchMediaDetails, searchMedia, createMedia, MediaInsertDTO } from '../services/media.service';
+import { fetchTrendingMedia,
+          fetchMovies,
+           fetchTvShows,
+            fetchMediaDetails,
+             searchMedia,
+              createMedia,
+               MediaInsertDTO,
+                updateMedia,
+                 deleteMediaRecord } from '../services/media.service';
+
 
 export const getTrending = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -102,6 +111,37 @@ export const addMedia = async (req: Request, res: Response): Promise<void> => {
       errorMessage = error.message;
     }
     
+    res.status(500).json({ message: errorMessage });
+  }
+};
+
+export const editMediaController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Explicitly casting as string fixes the TypeScript error!
+    const id = parseInt(req.params.id as string, 10);
+    const mediaData: MediaInsertDTO = req.body;
+    
+    const updated = await updateMedia(id, mediaData);
+    res.status(200).json(updated);
+  } catch (error: unknown) {
+    console.error('Error updating media:', error);
+    let errorMessage = 'Server error updating media';
+    if (error instanceof Error) errorMessage = error.message;
+    res.status(500).json({ message: errorMessage });
+  }
+};
+
+export const deleteMediaController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Explicitly casting as string fixes the TypeScript error!
+    const id = parseInt(req.params.id as string, 10);
+    
+    await deleteMediaRecord(id);
+    res.status(200).json({ message: 'Media and associated assets deleted successfully' });
+  } catch (error: unknown) {
+    console.error('Error deleting media:', error);
+    let errorMessage = 'Server error deleting media';
+    if (error instanceof Error) errorMessage = error.message;
     res.status(500).json({ message: errorMessage });
   }
 };

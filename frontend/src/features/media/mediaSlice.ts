@@ -105,6 +105,32 @@ export const searchMediaThunk = createAsyncThunk(
   }
 );
 
+export const editMediaAsync = createAsyncThunk<Media, Media>(
+  "media/editMediaAsync",
+  async (mediaData, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/media/${mediaData.id}`, mediaData);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) return rejectWithValue(error.response?.data?.message || 'Failed to edit media');
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
+export const deleteMediaAsync = createAsyncThunk<number | string, number | string>(
+  "media/deleteMediaAsync",
+  async (id, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/media/${id}`);
+      return id; // Return the ID so the reducer can remove it from state
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) return rejectWithValue(error.response?.data?.message || 'Failed to delete media');
+      return rejectWithValue('An unexpected error occurred');
+    }
+  }
+);
+
 // -----------------------------
 // Slice
 // -----------------------------
@@ -228,7 +254,32 @@ const mediaSlice = createSlice({
         state.searchResults = action.payload;
       })
       .addCase(searchMediaThunk.rejected, (state) => { state.status.searchResults = "failed"; });
+
+    builder.addCase(editMediaAsync.fulfilled, (state, action) => {
+      const updatedMedia = action.payload;
+      
+      // Update in customMovies
+      const customIndex = state.customMovies.findIndex(m => String(m.id) === String(updatedMedia.id));
+      if (customIndex !== -1) state.customMovies[customIndex] = updatedMedia;
+      
+      // Update in edited array
+      const editIndex = state.edited.findIndex(m => String(m.id) === String(updatedMedia.id));
+      if (editIndex !== -1) state.edited[editIndex] = updatedMedia;
+      else state.edited.push(updatedMedia);
+    });
+
+    // Handle Delete
+    builder.addCase(deleteMediaAsync.fulfilled, (state, action) => {
+      const id = action.payload;
+      state.customMovies = state.customMovies.filter((m) => String(m.id) !== String(id));
+      state.trending = state.trending.filter((m) => String(m.id) !== String(id));
+      state.movies = state.movies.filter((m) => String(m.id) !== String(id));
+      state.tvShows = state.tvShows.filter((m) => String(m.id) !== String(id));
+      if (!state.deleted.includes(id)) state.deleted.push(id);
+    });
   },
+
+  
 });
 
 // FIX: Removed `addMedia` from here since it's no longer a synchronous reducer!

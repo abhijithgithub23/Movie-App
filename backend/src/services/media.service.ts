@@ -1,5 +1,7 @@
 import { getTrendingMediaDB, getMediaByTypeDB, getMediaDetailsDB, searchMediaDB } from '../repositories/media.repository';
 import * as mediaRepository from '../repositories/media.repository';
+import cloudinary from '../config/cloudinary';
+
 
 export interface MediaInsertDTO {
   type: 'movie' | 'tv';
@@ -53,4 +55,51 @@ export const createMedia = async (mediaData: MediaInsertDTO) => {
     throw new Error('Type and Overview are strictly required.');
   }
   return await mediaRepository.insertMedia(mediaData);
+};
+
+
+// Helper to destroy images in Cloudinary
+const deleteFromCloudinary = async (url: string) => {
+  if (!url || !url.includes('cloudinary.com')) return;
+  try {
+    // Extract the folder and filename (e.g., cinevia/image123)
+    const parts = url.split('/');
+    const filename = parts.pop();
+    const folder = parts.pop();
+    if (filename && folder) {
+      const publicId = `${folder}/${filename.split('.')[0]}`;
+      await cloudinary.uploader.destroy(publicId);
+    }
+  } catch (error) {
+    console.error(`Failed to delete image ${url} from Cloudinary:`, error);
+  }
+};
+
+export const updateMedia = async (id: number, mediaData: MediaInsertDTO) => {
+  // 1. Get the existing media to check if images changed
+  const oldMedia = await mediaRepository.getMediaDetailsDB(mediaData.type, id);
+  if (!oldMedia) throw new Error('Media not found');
+
+  // 2. If the user uploaded a NEW poster/backdrop, delete the OLD ones from Cloudinary to save space
+  if (oldMedia.poster_path && oldMedia.poster_path !== mediaData.poster_path) {
+    await deleteFromCloudinary(oldMedia.poster_path);
+  }
+  if (oldMedia.backdrop_path && oldMedia.backdrop_path !== mediaData.backdrop_path) {
+    await deleteFromCloudinary(oldMedia.backdrop_path);
+  }
+
+  // 3. Update the database
+  return await mediaRepository.updateMediaDB(id, mediaData);
+};
+
+export const deleteMediaRecord = async (id: number) => {
+  // 1. Delete from Postgres and get the image URLs back
+  const deletedRecord = await mediaRepository.deleteMediaDB(id);
+  
+  if (deletedRecord) {
+    // 2. Erase the images from Cloudinary!
+    if (deletedRecord.poster_path) await deleteFromCloudinary(deletedRecord.poster_path);
+    if (deletedRecord.backdrop_path) await deleteFromCloudinary(deletedRecord.backdrop_path);
+  }
+  return deletedRecord;
 };

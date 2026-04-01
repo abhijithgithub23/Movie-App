@@ -13,7 +13,7 @@ export const uploadImage = async (req: Request, res: Response): Promise<void> =>
 
     const result = await cloudinary.uploader.upload(dataURI, {
       resource_type: 'auto',
-      folder: 'cinevia', // Updated to match your exact Cloudinary folder name
+      folder: 'cinevia', // Cloudinary folder name
     });
 
     res.status(200).json({ url: result.secure_url });

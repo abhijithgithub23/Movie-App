@@ -9,7 +9,7 @@ const router = Router();
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage, 
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit enforced by backend
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit enforced by backend
 });
 
 // POST /api/upload - Protected so only logged-in users can upload

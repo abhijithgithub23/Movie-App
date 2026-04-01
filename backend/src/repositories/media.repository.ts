@@ -226,3 +226,55 @@ export const insertMedia = async (mediaData: any) => {
   const result = await pool.query(query, values);
   return result.rows[0];
 };
+
+
+// edit--------------
+
+
+export const updateMediaDB = async (tmdbId: number, mediaData: any) => {
+  const query = `
+    UPDATE media SET
+      title = $2,
+      original_name = $3,
+      overview = $4,
+      tagline = $5,
+      release_date = $6,
+      first_air_date = $7,
+      runtime = $8,
+      vote_average = $9,
+      popularity = $10,
+      poster_path = $11,
+      backdrop_path = $12,
+      genres = $13::jsonb,
+      spoken_languages = $14::jsonb
+    WHERE tmdb_id = $1
+    RETURNING *;
+  `;
+
+  const values = [
+    tmdbId,                                          // $1
+    mediaData.title || null,                         // $2
+    mediaData.original_name || null,                 // $3
+    mediaData.overview || null,                      // $4
+    mediaData.tagline || null,                       // $5
+    mediaData.release_date || null,                  // $6
+    mediaData.first_air_date || null,                // $7
+    mediaData.runtime || null,                       // $8
+    mediaData.vote_average || 0,                     // $9
+    mediaData.popularity || 0,                       // $10
+    mediaData.poster_path || null,                   // $11
+    mediaData.backdrop_path || null,                 // $12
+    mediaData.genres ? JSON.stringify(mediaData.genres) : null,                           // $13
+    mediaData.spoken_languages ? JSON.stringify(mediaData.spoken_languages) : null        // $14
+  ];
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+export const deleteMediaDB = async (tmdbId: number) => {
+  // We RETURNING the image paths so we know what to delete from Cloudinary!
+  const query = `DELETE FROM media WHERE tmdb_id = $1 RETURNING poster_path, backdrop_path;`;
+  const { rows } = await pool.query(query, [tmdbId]);
+  return rows[0]; 
+};

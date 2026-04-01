@@ -74,13 +74,13 @@ const AddMedia = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(`Image is too large. Please select an image under 5MB.`);
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`Image is too large. Please select an image under 10MB.`);
       return;
     }
 
     setIsUploadingImage(true);
-    const toastId = toast.loading('Uploading securely via backend...');
+    const toastId = toast.loading('Uploading Image...');
 
     try {
       const uploadData = new FormData();

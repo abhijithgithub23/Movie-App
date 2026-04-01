@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { deleteMedia } from '../features/media/mediaSlice';
+import { deleteMediaAsync } from '../features/media/mediaSlice';
 import { toggleFavoriteAsync } from '../features/favorites/favoritesSlice';
 import toast from 'react-hot-toast'; 
 import type { RootState, AppDispatch } from '../store/store';
@@ -71,36 +71,37 @@ const Details = () => {
            tvShows.find((m) => String(m.id) === id);
   }, [id, editedMedia, customMovies, favorites, trending, movies, tvShows]);
 
+  // FIX: The fresh database data (tmdbMedia) should ALWAYS overwrite the stale Redux memory!
   const media: Media | null = useMemo(() => {
-    if (reduxMedia && tmdbMedia) {
-      return {
-        ...tmdbMedia,
-        ...reduxMedia,
-        genres: reduxMedia.genres || tmdbMedia.genres,
-      };
-    }
-    return reduxMedia ?? tmdbMedia ?? null;
+    if (tmdbMedia) return tmdbMedia;    // 1st Priority: Fresh fetch from Backend
+    if (reduxMedia) return reduxMedia;  // 2nd Priority: Redux cache (shows instantly while loading)
+    return null;
   }, [reduxMedia, tmdbMedia]);
 
   const isFavorited = useMemo(() => {
     return favorites.some((item) => String(item.id) === String(id));
   }, [favorites, id]);
 
-  const isCustom = String(id).startsWith('custom-');
-  const hasFullData = Boolean(reduxMedia?.genres?.length);
   const hasLocalData = Boolean(reduxMedia);
 
+  // FIX: Removed the early return so it ALWAYS fetches the freshest data from your PostgreSQL backend!
   useEffect(() => {
     if (!id || !type) return;
-    if (isCustom || hasFullData) return;
 
     let canceled = false;
+    
+    // Always trigger a background fetch to ensure we have the absolute latest edits
     apiClient.get<Media>(`/media/${type}/${id}`)
-      .then((res) => { if (!canceled) setTmdbMedia(res.data); })
-      .catch(() => { if (!canceled && !hasLocalData) navigate('/'); });
+      .then((res) => { 
+        if (!canceled) setTmdbMedia(res.data); 
+      })
+      .catch(() => { 
+        // If the fetch fails (e.g. bad network), only kick them out if we have zero backup data
+        if (!canceled && !hasLocalData) navigate('/'); 
+      });
 
     return () => { canceled = true; };
-  }, [id, type, isCustom, hasFullData, hasLocalData, navigate]);
+  }, [id, type, hasLocalData, navigate]);
 
   if (!media) {
     return (
@@ -140,16 +141,16 @@ const Details = () => {
     return media.release_date?.substring(0, 4) || 'TBA';
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (media.id) {
       try {
-        dispatch(deleteMedia(media.id));
+        await dispatch(deleteMediaAsync(media.id)).unwrap();
         setShowDeleteModal(false);
         toast.success(`"${media.title || media.name}" was deleted successfully!`, { duration: 2000 });
         setTimeout(() => navigate('/'), 1000);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to delete media:", error);
-        toast.error("Failed to delete media. Please try again.");
+        toast.error(typeof error === 'string' ? error : "Failed to delete media. Please try again.");
       }
     }
   };
@@ -161,10 +162,8 @@ const Details = () => {
       return;
     }
     
-    // We send the full media object to the backend so it can save it in the JSONB column
     dispatch(toggleFavoriteAsync(mediaData));
     
-    // Optional: Show a toast based on whether we are adding or removing
     if (isFavorited) {
       toast.success("Removed from favorites", { icon: '💔' });
     } else {
@@ -221,7 +220,6 @@ const Details = () => {
                 </svg>
               </button>
 
-              {/* ONLY ADMIN CAN SEE EDIT AND DELETE BUTTONS */}
               {isAdmin && (
                 <div className="flex justify-center items-center gap-4 border-l pl-6 border-text-muted/30">
                   <button onClick={() => navigate(`/admin/edit/${type}/${media.id}`, { state: { fullMedia: media } })} className="p-2.5 rounded-full bg-blue-600/20 text-blue-500 border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all duration-300">
@@ -360,7 +358,7 @@ const Details = () => {
                     <h4 className="text-text-muted text-xs font-bold uppercase tracking-wider mb-3">Networks</h4>
                     <div className="flex flex-wrap gap-2">
                       {mediaData.networks.map((network) => (
-                        <span key={network.id} className="text-text-main text-xs font-medium bg-btn-bg/10 text-btn-bg border border-btn-bg/20 px-3 py-1.5 rounded-md">{network.name}</span>
+                        <span key={network.id} className="text-text-main text-xs font-medium bg-btn-bg/10 border border-btn-bg/20 px-3 py-1.5 rounded-md">{network.name}</span>
                       ))}
                     </div>
                   </div>
