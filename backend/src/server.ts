@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import mediaRoutes from './routes/media.routes';
 import authRoutes from './routes/auth.routes';
 import favoritesRoutes from './routes/favorites.routes';
+import uploadRoutes from './routes/upload.routes';
 
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use('/api/media', mediaRoutes);
 app.use('/api/auth', authRoutes); 
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/upload', uploadRoutes);
 
 
 

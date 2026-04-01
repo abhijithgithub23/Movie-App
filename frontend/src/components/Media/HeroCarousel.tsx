@@ -1,4 +1,4 @@
-import { useState, useEffect , memo} from "react";
+import { useState, useEffect, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -42,8 +42,19 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
 
   if (!items.length) return null;
 
-  
-  
+  // FIX: Smart URL logic for the blurry background
+  const getBackdropUrl = (path?: string) => {
+    if (!path) return "none";
+    if (path.startsWith("http") || path.startsWith("data:")) return `url(${path})`;
+    return `url(https://image.tmdb.org/t/p/original${path})`;
+  };
+
+  // FIX: Smart URL logic for the main poster
+  const getPosterUrl = (path?: string) => {
+    if (!path) return ""; 
+    if (path.startsWith("http") || path.startsWith("data:")) return path;
+    return `https://image.tmdb.org/t/p/w500${path}`;
+  };
 
   return (
     <div className="relative h-[80vh] w-full overflow-hidden flex items-center bg-main">
@@ -60,9 +71,8 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
             <div
               className="absolute inset-0 bg-cover bg-center blur-sm scale-110 opacity-70"
               style={{
-                backgroundImage: item.backdrop_path
-                  ? `url(https://image.tmdb.org/t/p/original${item.backdrop_path})`
-                  : "none",
+                // FIX: Applied smart backdrop URL here
+                backgroundImage: getBackdropUrl(item.backdrop_path),
               }}
             />
 
@@ -118,7 +128,8 @@ const HeroCarousel = ({ items, mediaType, badgeText }: HeroCarouselProps) => {
                   onClick={() => handleHeroClick(item.id)}
                 >
                   <img
-                    src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+                    // FIX: Applied smart poster URL here
+                    src={getPosterUrl(item.poster_path)}
                     alt={item.title || item.name || "Poster"}
                     className="w-full h-auto object-cover"
                   />

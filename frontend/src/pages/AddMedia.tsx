@@ -3,8 +3,10 @@ import { useDispatch } from 'react-redux';
 import { addMediaAsync } from '../features/media/mediaSlice';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast'; 
+import apiClient from '../api/apiClient'; // NEW: Imported apiClient for secure upload
 import type { AppDispatch } from '../store/store';
 import type { Media } from '../types';
+import axios from 'axios';
 
 type FormData = {
   title: string;
@@ -18,7 +20,7 @@ type FormData = {
   number_of_seasons: string;
   number_of_episodes: string;
   vote_average: string;
-  popularity: string; // NEW: Added Popularity
+  popularity: string; 
   original_language: string;
   genres: string[];
   spoken_languages: string[];
@@ -49,6 +51,9 @@ const AddMedia = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // NEW: Track image upload state to prevent form submission during upload
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  
   const [formData, setFormData] = useState<FormData>({
     title: '', tagline: '', overview: '', poster_path: '', backdrop_path: '',
     media_type: 'movie', release_date: '', runtime: '', 
@@ -64,18 +69,49 @@ const AddMedia = () => {
     try { new URL(source); return true; } catch { return false; }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
+  // --- UPDATED: STRICTLY TYPED CLOUDINARY UPLOAD ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(`Image is too large. Please select an image under 2MB.`);
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`Image is too large. Please select an image under 5MB.`);
       return;
     }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => setFormData((prev) => ({ ...prev, [fieldName]: reader.result as string }));
+    setIsUploadingImage(true);
+    const toastId = toast.loading('Uploading securely via backend...');
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append('image', file);
+
+      const response = await apiClient.post('/upload', uploadData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setFormData((prev) => ({ ...prev, [fieldName]: response.data.url }));
+      toast.success('Image uploaded securely!', { id: toastId });
+      
+    } catch (error: unknown) { // STRICTLY UNKNOWN. NO ANY.
+      console.error('Upload Error:', error);
+      
+      let errorMessage = 'Failed to upload image.';
+      
+      // Type guard to safely check if it's an Axios error
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = ''; 
+    }
   };
 
   const validateForm = () => {
@@ -87,7 +123,6 @@ const AddMedia = () => {
     if (formData.genres.length === 0) newErrors.genres = 'Select at least one genre';
     if (formData.spoken_languages.length === 0) newErrors.spoken_languages = 'Select at least one language';
     
-    // Validate Rating
     if (formData.vote_average) {
       const vote = parseFloat(formData.vote_average);
       if (isNaN(vote) || vote < 0 || vote > 10) {
@@ -95,7 +130,6 @@ const AddMedia = () => {
       }
     }
 
-    // Validate Popularity
     if (formData.popularity) {
       const pop = parseFloat(formData.popularity);
       if (isNaN(pop) || pop < 0) {
@@ -127,18 +161,15 @@ const AddMedia = () => {
       original_name: formData.media_type === 'tv' ? formData.title : undefined,
       tagline: formData.tagline,
       overview: formData.overview,
-      poster_path: formData.poster_path,
+      poster_path: formData.poster_path, // Backend receives the clean Cloudinary URL
       backdrop_path: formData.backdrop_path,
       release_date: formData.media_type === 'movie' ? formData.release_date : undefined,
       first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
       runtime: formData.media_type === 'movie' && formData.runtime ? parseInt(formData.runtime, 10) : undefined,
       number_of_seasons: formData.media_type === 'tv' && formData.number_of_seasons ? parseInt(formData.number_of_seasons, 10) : undefined,
       number_of_episodes: formData.media_type === 'tv' && formData.number_of_episodes ? parseInt(formData.number_of_episodes, 10) : undefined,
-      
-      // Parse floats to keep the decimals
       vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
-      popularity: formData.popularity ? parseFloat(formData.popularity) : 0, // NEW
-      
+      popularity: formData.popularity ? parseFloat(formData.popularity) : 0,
       genres: formData.genres.map((name, index) => ({ id: Date.now() + index, name })), 
       spoken_languages: mappedLanguages,
     };
@@ -222,14 +253,13 @@ const AddMedia = () => {
                 )}
              </div>
 
-             {/* NEW: Stats Row (Rating & Popularity) */}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Rating (0-10)</label>
                   <input 
                     name="vote_average" 
                     type="number" 
-                    step="0.01" // Allows 2 decimal places
+                    step="0.01"
                     min="0" 
                     max="10" 
                     placeholder="e.g. 7.28"
@@ -244,7 +274,7 @@ const AddMedia = () => {
                   <input 
                     name="popularity" 
                     type="number" 
-                    step="0.01" // Allows 2 decimal places
+                    step="0.01"
                     min="0"
                     placeholder="e.g. 101.23"
                     className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" 
@@ -290,19 +320,26 @@ const AddMedia = () => {
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Poster URL or Upload *</label>
                   <input name="poster_path" type="text" className="w-full p-3 mb-2 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.poster_path} onChange={handleInputChange} />
-                  <input type="file" accept="image/*" className="text-sm text-gray-400" onChange={(e) => handleFileUpload(e, 'poster_path')} />
+                  {/* NEW: Disabled during upload */}
+                  <input type="file" accept="image/*" className="text-sm text-gray-400" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'poster_path')} />
                </div>
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Backdrop URL or Upload</label>
                   <input name="backdrop_path" type="text" className="w-full p-3 mb-2 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.backdrop_path} onChange={handleInputChange} />
-                  <input type="file" accept="image/*" className="text-sm text-gray-400" onChange={(e) => handleFileUpload(e, 'backdrop_path')} />
+                  {/* NEW: Disabled during upload */}
+                  <input type="file" accept="image/*" className="text-sm text-gray-400" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'backdrop_path')} />
                </div>
              </div>
           </div>
 
           <div className="flex justify-end mt-4">
-            <button type="submit" disabled={isSubmitting} className="bg-green-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-green-500 disabled:opacity-50 transition-all">
-              {isSubmitting ? 'Saving to Database...' : 'Save Media Database'}
+            {/* NEW: Button disabled logic updated to check both submitting AND uploading */}
+            <button 
+              type="submit" 
+              disabled={isSubmitting || isUploadingImage} 
+              className="bg-green-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-green-500 disabled:opacity-50 transition-all"
+            >
+              {isSubmitting ? 'Saving to Database...' : isUploadingImage ? 'Uploading Image...' : 'Save Media Database'}
             </button>
           </div>
         </form>

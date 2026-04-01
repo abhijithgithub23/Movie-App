@@ -64,6 +64,15 @@ const HeroSection = memo(({ trending }: { trending: MediaItem[] }) => {
     navigate(`/details/${type}/${textHero.id}`);
   };
 
+  // FIX: Smart URL logic to handle both Cloudinary and TMDB images
+  const getBackdropUrl = (path?: string) => {
+    if (!path) return "none";
+    if (path.startsWith("http") || path.startsWith("data:")) {
+      return `url(${path})`; // Use Cloudinary/Custom URL directly
+    }
+    return `url(https://image.tmdb.org/t/p/original${path})`; // Append TMDB base URL
+  };
+
   return (
     <div className="relative h-[75vh] overflow-hidden">
       {trending.slice(0, 10).map((item, i) => {
@@ -80,9 +89,8 @@ const HeroSection = memo(({ trending }: { trending: MediaItem[] }) => {
               isSnapping ? "duration-0" : "duration-1000 ease-in-out"
             }`}
             style={{
-              backgroundImage: item.backdrop_path
-                ? `url(https://image.tmdb.org/t/p/original${item.backdrop_path})`
-                : "none",
+              // FIX: Call our smart URL function here instead of hardcoding TMDB
+              backgroundImage: getBackdropUrl(item.backdrop_path),
               transform: `translateX(${position})`,
             }}
           />
