@@ -9,7 +9,6 @@ import type { Media } from '../types';
 import { useTheme } from '../context/ThemeContext'; 
 import apiClient from '../api/apiClient';
 
-// --- TYPESCRIPT INTERFACES ---
 interface CastMember { id: number; name: string; character?: string; profile_path?: string | null; }
 interface CrewMember { id: number; name: string; job: string; department?: string; profile_path?: string | null; }
 interface ProductionCompany { id: number; name: string; logo_path?: string | null; }
@@ -44,14 +43,12 @@ const Details = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { theme } = useTheme(); 
   
-  // REDUX AUTHENTICATION CHECK
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const isAdmin = user?.is_admin === true;
 
   const id = paramId || '';
   const type = paramType || '';
 
-  // Redux State Selectors
   const trending = useSelector((state: RootState) => state.media.trending);
   const movies = useSelector((state: RootState) => state.media.movies);
   const tvShows = useSelector((state: RootState) => state.media.tvShows);
@@ -71,10 +68,9 @@ const Details = () => {
            tvShows.find((m) => String(m.id) === id);
   }, [id, editedMedia, customMovies, favorites, trending, movies, tvShows]);
 
-  // FIX: The fresh database data (tmdbMedia) should ALWAYS overwrite the stale Redux memory!
   const media: Media | null = useMemo(() => {
-    if (tmdbMedia) return tmdbMedia;    // 1st Priority: Fresh fetch from Backend
-    if (reduxMedia) return reduxMedia;  // 2nd Priority: Redux cache (shows instantly while loading)
+    if (tmdbMedia) return tmdbMedia;    
+    if (reduxMedia) return reduxMedia;  
     return null;
   }, [reduxMedia, tmdbMedia]);
 
@@ -84,19 +80,16 @@ const Details = () => {
 
   const hasLocalData = Boolean(reduxMedia);
 
-  // FIX: Removed the early return so it ALWAYS fetches the freshest data from your PostgreSQL backend!
   useEffect(() => {
     if (!id || !type) return;
 
     let canceled = false;
     
-    // Always trigger a background fetch to ensure we have the absolute latest edits
     apiClient.get<Media>(`/media/${type}/${id}`)
       .then((res) => { 
         if (!canceled) setTmdbMedia(res.data); 
       })
       .catch(() => { 
-        // If the fetch fails (e.g. bad network), only kick them out if we have zero backup data
         if (!canceled && !hasLocalData) navigate('/'); 
       });
 
@@ -146,7 +139,8 @@ const Details = () => {
       try {
         await dispatch(deleteMediaAsync(media.id)).unwrap();
         setShowDeleteModal(false);
-        toast.success(`"${media.title || media.name}" was deleted successfully!`, { duration: 2000 });
+        // THE FIX: Fallback to original_name
+        toast.success(`"${media.title || media.name || media.original_name}" was deleted successfully!`, { duration: 2000 });
         setTimeout(() => navigate('/'), 1000);
       } catch (error: unknown) {
         console.error("Failed to delete media:", error);
@@ -193,7 +187,8 @@ const Details = () => {
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 -mt-72 md:-mt-96 relative z-10 flex flex-col md:flex-row gap-8 md:gap-16">
           <div className="w-full md:w-1/3 lg:w-1/4 flex-shrink-0 flex flex-col items-center">
-            <img src={posterUrl} alt={media.title || media.name} className="w-64 md:w-full rounded-2xl shadow-2xl shadow-main/80 border border-text-muted/20 object-cover" />
+            {/* THE FIX: Fallback to original_name */}
+            <img src={posterUrl} alt={media.title || media.name || media.original_name} className="w-64 md:w-full rounded-2xl shadow-2xl shadow-main/80 border border-text-muted/20 object-cover" />
             
             <div className="w-full mt-4 flex justify-center gap-4">
                {mediaData.homepage && (
@@ -234,7 +229,8 @@ const Details = () => {
           </div>
 
           <div className="flex-1 mt-8 md:mt-16 overflow-hidden">
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md text-text-main">{media.title || media.name}</h1>
+            {/* THE FIX: Fallback to original_name */}
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-2 drop-shadow-md text-text-main">{media.title || media.name || media.original_name}</h1>
             {media.tagline && <p className="text-xl md:text-2xl text-text-muted italic mb-6 font-light">"{media.tagline}"</p>}
 
             <div className="flex flex-wrap items-center gap-4 mb-8 text-sm md:text-base font-medium">
@@ -399,7 +395,7 @@ const Details = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
           <div className="bg-card-bg border border-text-muted/20 rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl transform scale-100 transition-all duration-300">
             <h2 className="text-2xl font-bold text-text-main mb-4">Delete Media</h2>
-            <p className="text-text-muted mb-8">Are you sure you want to delete <span className="font-semibold text-text-main">"{media.title || media.name}"</span>? This action cannot be undone.</p>
+            <p className="text-text-muted mb-8">Are you sure you want to delete <span className="font-semibold text-text-main">"{media.title || media.name || media.original_name}"</span>? This action cannot be undone.</p>
             <div className="flex gap-4 justify-end">
               <button onClick={() => setShowDeleteModal(false)} className="px-6 py-2.5 rounded-xl font-semibold bg-text-muted/20 text-text-main hover:bg-text-muted/30 transition-colors">Cancel</button>
               <button onClick={confirmDelete} className="px-6 py-2.5 rounded-xl font-semibold bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-600/30 transition-all">Yes, Delete</button>

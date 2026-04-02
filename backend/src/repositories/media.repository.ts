@@ -246,7 +246,9 @@ export const updateMediaDB = async (tmdbId: number, mediaData: any) => {
       poster_path = $11,
       backdrop_path = $12,
       genres = $13::jsonb,
-      spoken_languages = $14::jsonb
+      spoken_languages = $14::jsonb,
+      number_of_seasons = $15,  -- ADDED
+      number_of_episodes = $16  -- ADDED
     WHERE tmdb_id = $1
     RETURNING *;
   `;
@@ -265,7 +267,9 @@ export const updateMediaDB = async (tmdbId: number, mediaData: any) => {
     mediaData.poster_path || null,                   // $11
     mediaData.backdrop_path || null,                 // $12
     mediaData.genres ? JSON.stringify(mediaData.genres) : null,                           // $13
-    mediaData.spoken_languages ? JSON.stringify(mediaData.spoken_languages) : null        // $14
+    mediaData.spoken_languages ? JSON.stringify(mediaData.spoken_languages) : null,       // $14
+    mediaData.number_of_seasons || null,             // $15 (FIXED)
+    mediaData.number_of_episodes || null             // $16 (FIXED)
   ];
 
   const result = await pool.query(query, values);

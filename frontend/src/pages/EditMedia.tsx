@@ -17,6 +17,8 @@ type FormData = {
   media_type: 'movie' | 'tv';
   release_date: string;
   runtime: string;
+  number_of_seasons: string; 
+  number_of_episodes: string; 
   vote_average: string;
   popularity: string;
   original_language: string;
@@ -62,7 +64,8 @@ const EditMedia = () => {
 
   const [formData, setFormData] = useState<FormData>({
     title: '', tagline: '', overview: '', poster_path: '', backdrop_path: '',     
-    media_type: 'movie', release_date: '', runtime: '', vote_average: '', popularity: '',
+    media_type: 'movie', release_date: '', runtime: '', number_of_seasons: '', number_of_episodes: '',
+    vote_average: '', popularity: '',
     original_language: 'en', genres: [], spoken_languages: ['en'],
   });
 
@@ -86,7 +89,8 @@ const EditMedia = () => {
       const formattedDate = rawDate ? new Date(rawDate).toISOString().substring(0, 10) : '';
 
       setFormData({
-        title: finalMedia.title || finalMedia.name || '',
+        // THE FIX: Check for title, then name, then original_name from the DB!
+        title: finalMedia.title || finalMedia.name || finalMedia.original_name || '',
         tagline: finalMedia.tagline || '',
         overview: finalMedia.overview || '',
         poster_path: getFullUrl(finalMedia.poster_path, 'w500'),
@@ -94,6 +98,8 @@ const EditMedia = () => {
         media_type: finalMedia.media_type || (type as 'movie' | 'tv'),
         release_date: formattedDate,
         runtime: finalMedia.runtime ? finalMedia.runtime.toString() : '',
+        number_of_seasons: finalMedia.number_of_seasons ? finalMedia.number_of_seasons.toString() : '',
+        number_of_episodes: finalMedia.number_of_episodes ? finalMedia.number_of_episodes.toString() : '',
         vote_average: finalMedia.vote_average ? finalMedia.vote_average.toString() : '',
         popularity: finalMedia.popularity ? finalMedia.popularity.toString() : '',
         original_language: finalMedia.original_language || 'en',
@@ -177,75 +183,44 @@ const EditMedia = () => {
   const validateForm = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
 
-    // Type Validation
-    if (formData.media_type !== 'movie' && formData.media_type !== 'tv') {
-      newErrors.media_type = 'Invalid media type selected';
-    }
-
-    // Title Validation
     if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.overview.trim()) newErrors.overview = 'Overview is required';
+    
+    if (!formData.poster_path.trim()) newErrors.poster_path = 'Poster Image URL is required';
+    else if (!isValidImageSource(formData.poster_path)) newErrors.poster_path = 'Must be a valid URL';
 
-    // Overview Validation
-    const overviewTrimmed = formData.overview.trim();
-    if (!overviewTrimmed) {
-      newErrors.overview = 'Overview is required';
-    } else if (overviewTrimmed.length < 10) {
-      newErrors.overview = 'Overview must be at least 10 characters long';
-    } else if (overviewTrimmed.split(/\s+/).length < 3) {
-      newErrors.overview = 'Overview must contain at least 3 words';
-    }
+    if (!formData.release_date) newErrors.release_date = 'Release date is required';
+    if (formData.genres.length === 0) newErrors.genres = 'Please select at least one genre';
+    if (formData.spoken_languages.length === 0) newErrors.spoken_languages = 'Select at least one language';
 
-    // Release Date Validation
-    if (!formData.release_date) {
-      newErrors.release_date = 'Date is required';
-    } else if (new Date(formData.release_date) > new Date()) {
-      newErrors.release_date = 'Release date cannot be in the future';
-    }
-
-    // Number Validations
-    if (formData.runtime) {
+    if (formData.media_type === 'movie' && formData.runtime) {
       const time = Number(formData.runtime);
-      if (isNaN(time) || time <= 0) newErrors.runtime = 'Runtime must be a valid positive number';
+      if (isNaN(time) || time <= 0) newErrors.runtime = 'Runtime must be a positive number';
     }
 
-    // Rating & Popularity Validations (Max 2 decimal places)
-    if (formData.vote_average) {
-      const vote = Number(formData.vote_average);
-      if (isNaN(vote) || vote < 0 || vote > 10) {
-        newErrors.vote_average = 'Rating must be between 0 and 10';
-      } else if (!/^\d+(\.\d{1,2})?$/.test(formData.vote_average.trim())) {
-        newErrors.vote_average = 'Rating can have at most 2 decimal places';
+    if (formData.media_type === 'tv') {
+      if (formData.number_of_seasons) {
+        const seasons = Number(formData.number_of_seasons);
+        if (isNaN(seasons) || seasons < 0) newErrors.number_of_seasons = 'Must be a positive number';
       }
+      if (formData.number_of_episodes) {
+        const episodes = Number(formData.number_of_episodes);
+        if (isNaN(episodes) || episodes < 0) newErrors.number_of_episodes = 'Must be a positive number';
+      }
+    }
+
+    if (formData.vote_average) {
+      const vote = parseFloat(formData.vote_average);
+      if (isNaN(vote) || vote < 0 || vote > 10) newErrors.vote_average = 'Rating must be between 0 and 10';
     }
 
     if (formData.popularity) {
-      const pop = Number(formData.popularity);
-      if (isNaN(pop) || pop < 0) {
-        newErrors.popularity = 'Popularity must be a valid positive number';
-      } else if (!/^\d+(\.\d{1,2})?$/.test(formData.popularity.trim())) {
-        newErrors.popularity = 'Popularity can have at most 2 decimal places';
-      }
-    }
-
-    // Genres & Languages Validations
-    if (formData.genres.length === 0) newErrors.genres = 'Select at least one genre';
-    if (formData.spoken_languages.length === 0) newErrors.spoken_languages = 'Select at least one language';
-
-    // Image Validations
-    if (!formData.poster_path.trim()) {
-      newErrors.poster_path = 'Poster Image URL is required';
-    } else if (!isValidImageSource(formData.poster_path.trim())) {
-      newErrors.poster_path = 'Must be a valid URL or uploaded image';
-    }
-
-    if (formData.backdrop_path.trim() && !isValidImageSource(formData.backdrop_path.trim())) {
-      newErrors.backdrop_path = 'Must be a valid URL or uploaded image';
+      const pop = parseFloat(formData.popularity);
+      if (isNaN(pop) || pop < 0) newErrors.popularity = 'Popularity must be a positive number';
     }
 
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    if (Object.keys(newErrors).length > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
     return Object.keys(newErrors).length === 0;
   };
 
@@ -264,10 +239,12 @@ const EditMedia = () => {
       .filter(lang => formData.spoken_languages.includes(lang.iso))
       .map(lang => ({ iso_639_1: lang.iso, english_name: lang.english_name, name: lang.name }));
 
-    const updatedMedia: Media = {
+    const updatedMedia = {
       ...media, 
+      type: formData.media_type, 
+      original_name: formData.media_type === 'tv' ? formData.title.trim() : undefined, 
+      name: formData.media_type === 'tv' ? formData.title.trim() : undefined, 
       title: formData.media_type === 'movie' ? formData.title.trim() : undefined,
-      name: formData.media_type === 'tv' ? formData.title.trim() : undefined,
       tagline: formData.tagline.trim(),
       overview: formData.overview.trim(),
       poster_path: formData.poster_path.trim(),
@@ -275,7 +252,9 @@ const EditMedia = () => {
       media_type: formData.media_type,
       release_date: formData.media_type === 'movie' ? formData.release_date : undefined,
       first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
-      runtime: formData.runtime ? parseInt(formData.runtime, 10) : undefined,
+      runtime: formData.media_type === 'movie' && formData.runtime ? parseInt(formData.runtime, 10) : undefined,
+      number_of_seasons: formData.media_type === 'tv' && formData.number_of_seasons ? parseInt(formData.number_of_seasons, 10) : undefined,
+      number_of_episodes: formData.media_type === 'tv' && formData.number_of_episodes ? parseInt(formData.number_of_episodes, 10) : undefined,
       vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
       popularity: formData.popularity ? parseFloat(formData.popularity) : 0,
       original_language: formData.spoken_languages[0] || 'en',
@@ -284,7 +263,7 @@ const EditMedia = () => {
         return existing ? existing : { id: Date.now() + index, name };
       }),
       spoken_languages: mappedLanguages,
-    };
+    } as Media;
 
     try {
       await dispatch(editMediaAsync(updatedMedia)).unwrap();
@@ -292,10 +271,20 @@ const EditMedia = () => {
       setTimeout(() => navigate(`/details/${formData.media_type}/${media.id}`), 1000);
     } catch (error: unknown) {
       console.error("Failed to update media:", error);
+      
       let errorMessage = 'Failed to update media. Please try again.';
-      if (axios.isAxiosError(error)) errorMessage = error.response?.data?.message || errorMessage;
-      else if (error instanceof Error) errorMessage = error.message;
-      toast.error(errorMessage);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.errors) {
+           const zodErrors: Array<{ field: string; message: string }> = error.response.data.errors;
+           errorMessage = zodErrors.map((err) => `${err.field.replace('body.', '')}: ${err.message}`).join(' | ');
+        } else {
+           errorMessage = error.response?.data?.message || errorMessage;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage, { duration: 5000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -380,11 +369,28 @@ const EditMedia = () => {
                   <input name="release_date" type="date" max={todayDateString} className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.release_date} onChange={handleInputChange} />
                   {errors.release_date && <p className="text-red-500 text-sm mt-1">{errors.release_date}</p>}
                </div>
-               <div>
-                  <label className="block text-gray-400 font-medium mb-2">Runtime (mins)</label>
-                  <input name="runtime" type="number" min="1" className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.runtime} onChange={handleInputChange} />
-                  {errors.runtime && <p className="text-red-500 text-sm mt-1">{errors.runtime}</p>}
-               </div>
+
+               {formData.media_type === 'movie' ? (
+                 <div>
+                    <label className="block text-gray-400 font-medium mb-2">Runtime (mins)</label>
+                    <input name="runtime" type="number" min="1" className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.runtime} onChange={handleInputChange} />
+                    {errors.runtime && <p className="text-red-500 text-sm mt-1">{errors.runtime}</p>}
+                 </div>
+               ) : (
+                 <>
+                   <div>
+                      <label className="block text-gray-400 font-medium mb-2">Seasons</label>
+                      <input name="number_of_seasons" type="number" min="1" className={`w-full p-3 bg-gray-900 border ${errors.number_of_seasons ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.number_of_seasons} onChange={handleInputChange} />
+                      {errors.number_of_seasons && <p className="text-red-500 text-sm mt-1">{errors.number_of_seasons}</p>}
+                   </div>
+                   <div>
+                      <label className="block text-gray-400 font-medium mb-2">Episodes</label>
+                      <input name="number_of_episodes" type="number" min="1" className={`w-full p-3 bg-gray-900 border ${errors.number_of_episodes ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.number_of_episodes} onChange={handleInputChange} />
+                      {errors.number_of_episodes && <p className="text-red-500 text-sm mt-1">{errors.number_of_episodes}</p>}
+                   </div>
+                 </>
+               )}
+
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Rating</label>
                   <input name="vote_average" type="number" step="0.01" min="0" max="10" className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.vote_average} onChange={handleInputChange} />

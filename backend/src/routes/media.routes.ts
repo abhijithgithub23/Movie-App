@@ -1,21 +1,39 @@
-import { Router } from 'express';
-import { getTrending, getMovies, getTvShows, getMediaDetails, searchMediaController, addMedia, editMediaController, deleteMediaController } from '../controllers/media.controller';
-import { protect } from '../middleware/auth.middleware';
+import express from 'express';
+import { 
+  getTrending, 
+  getMovies, 
+  getTvShows, 
+  getMediaDetails, 
+  searchMediaController, 
+  addMedia, 
+  editMediaController, 
+  deleteMediaController 
+} from '../controllers/media.controller';
+import { validate } from '../middleware/validate.middleware';
+import { 
+  addMediaSchema, 
+  updateMediaSchema, 
+  mediaIdParamSchema, 
+  searchQuerySchema 
+} from '../schemas/media.schema';
 
-const router = Router();
+const router = express.Router();
 
 router.get('/trending', getTrending);
 router.get('/movies', getMovies);
 router.get('/tv', getTvShows);
 
-// Search MUST go before the dynamic /:type/:id route
-router.get('/search', searchMediaController);
+// Validate Queries
+router.get('/search', validate(searchQuerySchema), searchMediaController);
 
-router.get('/:type/:id', getMediaDetails);
+// Validate Body
+router.post('/', validate(addMediaSchema), addMedia);
 
-router.post('/', protect, addMedia);
+// Validate Params AND Body
+router.put('/:id', validate(updateMediaSchema), editMediaController);
 
-router.put('/:id', editMediaController);
-router.delete('/:id', deleteMediaController);
+// Validate Params
+router.get('/:type/:id', validate(mediaIdParamSchema), getMediaDetails);
+router.delete('/:id', validate(mediaIdParamSchema), deleteMediaController);
 
 export default router;
