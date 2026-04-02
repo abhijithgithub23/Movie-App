@@ -68,8 +68,16 @@ const ProfilePage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // VALIDATION: Strict image check
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed.');
+      e.target.value = '';
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       toast.error(`Image is too large. Please select an image under 5MB.`);
+      e.target.value = '';
       return;
     }
 
@@ -101,18 +109,31 @@ const ProfilePage = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.username.trim()) {
+    const trimmedUsername = formData.username.trim();
+    const trimmedPicUrl = formData.profile_pic.trim();
+
+    // VALIDATION: Username empty check
+    if (!trimmedUsername) {
       toast.error("Username cannot be empty");
       return;
     }
 
+    // VALIDATION: URL format check
+    if (trimmedPicUrl) {
+      try {
+        new URL(trimmedPicUrl);
+      } catch {
+        toast.error("Profile picture URL is invalid.");
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
-      // Assuming 'user' object has an 'id' property
       await dispatch(updateProfileAsync({
         id: user.id,
-        username: formData.username,
-        profile_pic: formData.profile_pic || null
+        username: trimmedUsername,
+        profile_pic: trimmedPicUrl || null
       })).unwrap();
       
       toast.success("Profile updated successfully!");

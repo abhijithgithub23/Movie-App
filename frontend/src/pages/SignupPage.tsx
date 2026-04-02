@@ -24,18 +24,40 @@ const SignupPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.username || !formData.email || !formData.password) {
+    const trimmedUsername = formData.username.trim();
+    const trimmedEmail = formData.email.trim();
+
+    // VALIDATION: Empty Checks
+    if (!trimmedUsername || !trimmedEmail || !formData.password) {
       toast.error("Please fill in all fields.");
       return;
     }
 
+    // VALIDATION: Email Format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    // VALIDATION: Password Length
+    if (formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters long.");
+      return;
+    }
+
     try {
-      await dispatch(registerUser(formData)).unwrap();
+      await dispatch(registerUser({
+        username: trimmedUsername,
+        email: trimmedEmail,
+        password: formData.password // Passwords are not trimmed to allow deliberate spacing
+      })).unwrap();
+      
       toast.success("Account created successfully!");
       // Send them straight to the app since the backend already logged them in!
       navigate('/'); 
-    }  catch (err) {
-      toast.error((err as string) || "Failed to log in. Please check your credentials.");
+    } catch (err) {
+      toast.error((err as string) || "Failed to create account. Please try again.");
     } 
   };
 
@@ -125,7 +147,7 @@ const SignupPage = () => {
                 placeholder="Create a password"
                 className="w-full pl-12 pr-5 py-4 bg-card-bg/50 border border-text-muted/20 rounded-2xl text-text-main placeholder-text-muted/50 focus:outline-none focus:ring-2 focus:ring-btn-bg/50 focus:border-btn-bg focus:bg-card-bg transition-all duration-300 shadow-sm"
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 

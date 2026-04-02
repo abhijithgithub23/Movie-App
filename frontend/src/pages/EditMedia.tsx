@@ -68,6 +68,8 @@ const EditMedia = () => {
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
+  const todayDateString = new Date().toISOString().split('T')[0];
+
   useEffect(() => {
     if (!id || !type) return;
 
@@ -80,10 +82,7 @@ const EditMedia = () => {
         return `https://image.tmdb.org/t/p/${size}${path}`;
       };
 
-      // FIX: Safely extract the raw date
       const rawDate = finalMedia.release_date || finalMedia.first_air_date || '';
-      
-      // FIX: Chop off the time data so the HTML input doesn't crash (takes only the first 10 characters: YYYY-MM-DD)
       const formattedDate = rawDate ? new Date(rawDate).toISOString().substring(0, 10) : '';
 
       setFormData({
@@ -93,10 +92,7 @@ const EditMedia = () => {
         poster_path: getFullUrl(finalMedia.poster_path, 'w500'),
         backdrop_path: getFullUrl(finalMedia.backdrop_path, 'original'),
         media_type: finalMedia.media_type || (type as 'movie' | 'tv'),
-        
-        // Apply the chopped date here!
         release_date: formattedDate,
-        
         runtime: finalMedia.runtime ? finalMedia.runtime.toString() : '',
         vote_average: finalMedia.vote_average ? finalMedia.vote_average.toString() : '',
         popularity: finalMedia.popularity ? finalMedia.popularity.toString() : '',
@@ -139,8 +135,15 @@ const EditMedia = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed.');
+      e.target.value = '';
+      return;
+    }
+
     if (file.size > 10 * 1024 * 1024) {
       toast.error(`Image is too large. Please select an image under 10MB.`);
+      e.target.value = '';
       return;
     }
 
@@ -174,27 +177,75 @@ const EditMedia = () => {
   const validateForm = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
 
+    // Type Validation
+    if (formData.media_type !== 'movie' && formData.media_type !== 'tv') {
+      newErrors.media_type = 'Invalid media type selected';
+    }
+
+    // Title Validation
     if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.overview.trim()) newErrors.overview = 'Overview is required';
-    
-    if (!formData.poster_path.trim()) newErrors.poster_path = 'Poster Image URL is required';
-    else if (!isValidImageSource(formData.poster_path)) newErrors.poster_path = 'Must be a valid URL';
 
-    if (!formData.release_date) newErrors.release_date = 'Release date is required';
-    if (formData.genres.length === 0) newErrors.genres = 'Please select at least one genre';
-    if (formData.spoken_languages.length === 0) newErrors.spoken_languages = 'Select at least one language';
+    // Overview Validation
+    const overviewTrimmed = formData.overview.trim();
+    if (!overviewTrimmed) {
+      newErrors.overview = 'Overview is required';
+    } else if (overviewTrimmed.length < 10) {
+      newErrors.overview = 'Overview must be at least 10 characters long';
+    } else if (overviewTrimmed.split(/\s+/).length < 3) {
+      newErrors.overview = 'Overview must contain at least 3 words';
+    }
 
+    // Release Date Validation
+    if (!formData.release_date) {
+      newErrors.release_date = 'Date is required';
+    } else if (new Date(formData.release_date) > new Date()) {
+      newErrors.release_date = 'Release date cannot be in the future';
+    }
+
+    // Number Validations
+    if (formData.runtime) {
+      const time = Number(formData.runtime);
+      if (isNaN(time) || time <= 0) newErrors.runtime = 'Runtime must be a valid positive number';
+    }
+
+    // Rating & Popularity Validations (Max 2 decimal places)
     if (formData.vote_average) {
-      const vote = parseFloat(formData.vote_average);
-      if (isNaN(vote) || vote < 0 || vote > 10) newErrors.vote_average = 'Rating must be between 0 and 10';
+      const vote = Number(formData.vote_average);
+      if (isNaN(vote) || vote < 0 || vote > 10) {
+        newErrors.vote_average = 'Rating must be between 0 and 10';
+      } else if (!/^\d+(\.\d{1,2})?$/.test(formData.vote_average.trim())) {
+        newErrors.vote_average = 'Rating can have at most 2 decimal places';
+      }
     }
 
     if (formData.popularity) {
-      const pop = parseFloat(formData.popularity);
-      if (isNaN(pop) || pop < 0) newErrors.popularity = 'Popularity must be a positive number';
+      const pop = Number(formData.popularity);
+      if (isNaN(pop) || pop < 0) {
+        newErrors.popularity = 'Popularity must be a valid positive number';
+      } else if (!/^\d+(\.\d{1,2})?$/.test(formData.popularity.trim())) {
+        newErrors.popularity = 'Popularity can have at most 2 decimal places';
+      }
+    }
+
+    // Genres & Languages Validations
+    if (formData.genres.length === 0) newErrors.genres = 'Select at least one genre';
+    if (formData.spoken_languages.length === 0) newErrors.spoken_languages = 'Select at least one language';
+
+    // Image Validations
+    if (!formData.poster_path.trim()) {
+      newErrors.poster_path = 'Poster Image URL is required';
+    } else if (!isValidImageSource(formData.poster_path.trim())) {
+      newErrors.poster_path = 'Must be a valid URL or uploaded image';
+    }
+
+    if (formData.backdrop_path.trim() && !isValidImageSource(formData.backdrop_path.trim())) {
+      newErrors.backdrop_path = 'Must be a valid URL or uploaded image';
     }
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -204,7 +255,6 @@ const EditMedia = () => {
 
     if (!validateForm()) {
       toast.error('Please fix the errors in the form.'); 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -216,12 +266,12 @@ const EditMedia = () => {
 
     const updatedMedia: Media = {
       ...media, 
-      title: formData.media_type === 'movie' ? formData.title : undefined,
-      name: formData.media_type === 'tv' ? formData.title : undefined,
-      tagline: formData.tagline,
-      overview: formData.overview,
-      poster_path: formData.poster_path,
-      backdrop_path: formData.backdrop_path,
+      title: formData.media_type === 'movie' ? formData.title.trim() : undefined,
+      name: formData.media_type === 'tv' ? formData.title.trim() : undefined,
+      tagline: formData.tagline.trim(),
+      overview: formData.overview.trim(),
+      poster_path: formData.poster_path.trim(),
+      backdrop_path: formData.backdrop_path.trim() || undefined,
       media_type: formData.media_type,
       release_date: formData.media_type === 'movie' ? formData.release_date : undefined,
       first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
@@ -238,7 +288,7 @@ const EditMedia = () => {
 
     try {
       await dispatch(editMediaAsync(updatedMedia)).unwrap();
-      toast.success(`"${formData.title}" updated successfully!`, { duration: 2000 });
+      toast.success(`"${formData.title.trim()}" updated successfully!`, { duration: 2000 });
       setTimeout(() => navigate(`/details/${formData.media_type}/${media.id}`), 1000);
     } catch (error: unknown) {
       console.error("Failed to update media:", error);
@@ -319,26 +369,31 @@ const EditMedia = () => {
              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Type <span className="text-yellow-500">*</span></label>
-                  <select name="media_type" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.media_type} onChange={handleInputChange}>
+                  <select name="media_type" className={`w-full p-3 bg-gray-900 border ${errors.media_type ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.media_type} onChange={handleInputChange} disabled>
                     <option value="movie">Movie</option>
                     <option value="tv">TV Show</option>
                   </select>
+                  {errors.media_type && <p className="text-red-500 text-sm mt-1">{errors.media_type}</p>}
                </div>
                <div>
                   <label className="block text-gray-400 font-medium mb-2">{formData.media_type === 'tv' ? 'First Air Date' : 'Release Date'} <span className="text-yellow-500">*</span></label>
-                  <input name="release_date" type="date" className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.release_date} onChange={handleInputChange} />
+                  <input name="release_date" type="date" max={todayDateString} className={`w-full p-3 bg-gray-900 border ${errors.release_date ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.release_date} onChange={handleInputChange} />
+                  {errors.release_date && <p className="text-red-500 text-sm mt-1">{errors.release_date}</p>}
                </div>
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Runtime (mins)</label>
-                  <input name="runtime" type="number" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.runtime} onChange={handleInputChange} />
+                  <input name="runtime" type="number" min="1" className={`w-full p-3 bg-gray-900 border ${errors.runtime ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.runtime} onChange={handleInputChange} />
+                  {errors.runtime && <p className="text-red-500 text-sm mt-1">{errors.runtime}</p>}
                </div>
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Rating</label>
-                  <input name="vote_average" type="number" step="0.01" max="10" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.vote_average} onChange={handleInputChange} />
+                  <input name="vote_average" type="number" step="0.01" min="0" max="10" className={`w-full p-3 bg-gray-900 border ${errors.vote_average ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.vote_average} onChange={handleInputChange} />
+                  {errors.vote_average && <p className="text-red-500 text-sm mt-1">{errors.vote_average}</p>}
                </div>
                <div>
                   <label className="block text-gray-400 font-medium mb-2">Popularity</label>
-                  <input name="popularity" type="number" step="0.01" className="w-full p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.popularity} onChange={handleInputChange} />
+                  <input name="popularity" type="number" step="0.01" min="0" className={`w-full p-3 bg-gray-900 border ${errors.popularity ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.popularity} onChange={handleInputChange} />
+                  {errors.popularity && <p className="text-red-500 text-sm mt-1">{errors.popularity}</p>}
                </div>
              </div>
 
@@ -351,6 +406,7 @@ const EditMedia = () => {
                     </button>
                   ))}
                 </div>
+                {errors.genres && <p className="text-red-500 text-sm mt-2">{errors.genres}</p>}
              </div>
 
              <div className="pt-4 border-t border-gray-800">
@@ -362,6 +418,7 @@ const EditMedia = () => {
                     </button>
                   ))}
                 </div>
+                {errors.spoken_languages && <p className="text-red-500 text-sm mt-2">{errors.spoken_languages}</p>}
              </div>
           </div>
 
@@ -371,12 +428,13 @@ const EditMedia = () => {
              <div>
                 <label className="block text-gray-400 font-medium mb-2">Poster Image <span className="text-yellow-500">*</span></label>
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                  <input name="poster_path" type="text" className="flex-1 p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.poster_path} onChange={handleInputChange} />
+                  <input name="poster_path" type="text" className={`flex-1 p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.poster_path} onChange={handleInputChange} />
                   <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     Upload File
                     <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'poster_path')} />
                   </label>
                 </div>
+                {errors.poster_path && <p className="text-red-500 text-sm mt-1">{errors.poster_path}</p>}
                 {formData.poster_path && isValidImageSource(formData.poster_path) && (
                   <img src={formData.poster_path} alt="Preview" className="w-32 rounded-lg border border-gray-700 shadow-xl mt-2" />
                 )}
@@ -385,12 +443,13 @@ const EditMedia = () => {
              <div className="pt-4 border-t border-gray-800">
                 <label className="block text-gray-400 font-medium mb-2">Background Cover (Optional)</label>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <input name="backdrop_path" type="text" className="flex-1 p-3 bg-gray-900 border border-gray-700 text-white rounded-lg" value={formData.backdrop_path} onChange={handleInputChange} />
+                  <input name="backdrop_path" type="text" className={`flex-1 p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.backdrop_path} onChange={handleInputChange} />
                   <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     Upload File
                     <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'backdrop_path')} />
                   </label>
                 </div>
+                {errors.backdrop_path && <p className="text-red-500 text-sm mt-1">{errors.backdrop_path}</p>}
              </div>
           </div>
 
