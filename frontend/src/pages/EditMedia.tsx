@@ -59,8 +59,11 @@ const EditMedia = () => {
 
   const [media, setMedia] = useState<Media | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // THE FIX: Store the files until submit
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [backdropFile, setBackdropFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     title: '', tagline: '', overview: '', poster_path: '', backdrop_path: '',     
@@ -89,7 +92,6 @@ const EditMedia = () => {
       const formattedDate = rawDate ? new Date(rawDate).toISOString().substring(0, 10) : '';
 
       setFormData({
-        // THE FIX: Check for title, then name, then original_name from the DB!
         title: finalMedia.title || finalMedia.name || finalMedia.original_name || '',
         tagline: finalMedia.tagline || '',
         overview: finalMedia.overview || '',
@@ -133,11 +135,11 @@ const EditMedia = () => {
   }, [id, type, trending, movies, tvShows, customMovies, navigate, location.state]);
 
   const isValidImageSource = (source: string) => {
-    if (source.startsWith('data:image/')) return true;
+    if (source.startsWith('data:image/') || source.startsWith('blob:')) return true;
     try { new URL(source); return true; } catch { return false; }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'poster_path' | 'backdrop_path') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -153,31 +155,25 @@ const EditMedia = () => {
       return;
     }
 
-    setIsUploadingImage(true);
-    const toastId = toast.loading('Uploading Image...');
-
-    try {
-      const uploadData = new FormData();
-      uploadData.append('image', file);
-
-      const response = await apiClient.post('/upload', uploadData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      setFormData((prev) => ({ ...prev, [fieldName]: response.data.url }));
-      if (errors[fieldName]) setErrors((prev) => ({ ...prev, [fieldName]: undefined }));
-      toast.success('Image uploaded securely!', { id: toastId });
-      
-    } catch (error: unknown) {
-      console.error('Upload Error:', error);
-      let errorMessage = 'Failed to upload image.';
-      if (axios.isAxiosError(error)) errorMessage = error.response?.data?.message || errorMessage;
-      else if (error instanceof Error) errorMessage = error.message;
-      toast.error(errorMessage, { id: toastId });
-    } finally {
-      setIsUploadingImage(false);
-      e.target.value = ''; 
+    if (fieldName === 'poster_path' && formData.poster_path.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.poster_path);
     }
+    if (fieldName === 'backdrop_path' && formData.backdrop_path.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.backdrop_path);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    if (fieldName === 'poster_path') {
+      setPosterFile(file);
+      setFormData(prev => ({ ...prev, poster_path: previewUrl }));
+    } else {
+      setBackdropFile(file);
+      setFormData(prev => ({ ...prev, backdrop_path: previewUrl }));
+    }
+
+    if (errors[fieldName]) setErrors(prev => ({ ...prev, [fieldName]: undefined }));
+    e.target.value = ''; 
   };
 
   const validateForm = () => {
@@ -234,44 +230,63 @@ const EditMedia = () => {
     }
 
     setIsSubmitting(true);
-
-    const mappedLanguages = LANGUAGE_OPTIONS
-      .filter(lang => formData.spoken_languages.includes(lang.iso))
-      .map(lang => ({ iso_639_1: lang.iso, english_name: lang.english_name, name: lang.name }));
-
-    const updatedMedia = {
-      ...media, 
-      type: formData.media_type, 
-      original_name: formData.media_type === 'tv' ? formData.title.trim() : undefined, 
-      name: formData.media_type === 'tv' ? formData.title.trim() : undefined, 
-      title: formData.media_type === 'movie' ? formData.title.trim() : undefined,
-      tagline: formData.tagline.trim(),
-      overview: formData.overview.trim(),
-      poster_path: formData.poster_path.trim(),
-      backdrop_path: formData.backdrop_path.trim() || undefined,
-      media_type: formData.media_type,
-      release_date: formData.media_type === 'movie' ? formData.release_date : undefined,
-      first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
-      runtime: formData.media_type === 'movie' && formData.runtime ? parseInt(formData.runtime, 10) : undefined,
-      number_of_seasons: formData.media_type === 'tv' && formData.number_of_seasons ? parseInt(formData.number_of_seasons, 10) : undefined,
-      number_of_episodes: formData.media_type === 'tv' && formData.number_of_episodes ? parseInt(formData.number_of_episodes, 10) : undefined,
-      vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
-      popularity: formData.popularity ? parseFloat(formData.popularity) : 0,
-      original_language: formData.spoken_languages[0] || 'en',
-      genres: formData.genres.map((name, index) => {
-        const existing = media.genres?.find(g => g.name === name);
-        return existing ? existing : { id: Date.now() + index, name };
-      }),
-      spoken_languages: mappedLanguages,
-    } as Media;
+    const toastId = toast.loading('Uploading images and saving...');
 
     try {
+      let finalPosterPath = formData.poster_path.trim();
+      let finalBackdropPath = formData.backdrop_path.trim();
+
+      const uploadToCloudinary = async (file: File) => {
+        const uploadData = new FormData();
+        uploadData.append('image', file);
+        const response = await apiClient.post('/upload', uploadData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data.url;
+      };
+
+      if (posterFile) finalPosterPath = await uploadToCloudinary(posterFile);
+      if (backdropFile) finalBackdropPath = await uploadToCloudinary(backdropFile);
+
+      const mappedLanguages = LANGUAGE_OPTIONS
+        .filter(lang => formData.spoken_languages.includes(lang.iso))
+        .map(lang => ({ iso_639_1: lang.iso, english_name: lang.english_name, name: lang.name }));
+
+      const updatedMedia = {
+        ...media, 
+        type: formData.media_type, 
+        original_name: formData.media_type === 'tv' ? formData.title.trim() : undefined, 
+        name: formData.media_type === 'tv' ? formData.title.trim() : undefined, 
+        title: formData.media_type === 'movie' ? formData.title.trim() : undefined,
+        tagline: formData.tagline.trim(),
+        overview: formData.overview.trim(),
+        poster_path: finalPosterPath,
+        backdrop_path: finalBackdropPath || undefined,
+        media_type: formData.media_type,
+        release_date: formData.media_type === 'movie' ? formData.release_date : undefined,
+        first_air_date: formData.media_type === 'tv' ? formData.release_date : undefined,
+        runtime: formData.media_type === 'movie' && formData.runtime ? parseInt(formData.runtime, 10) : undefined,
+        number_of_seasons: formData.media_type === 'tv' && formData.number_of_seasons ? parseInt(formData.number_of_seasons, 10) : undefined,
+        number_of_episodes: formData.media_type === 'tv' && formData.number_of_episodes ? parseInt(formData.number_of_episodes, 10) : undefined,
+        vote_average: formData.vote_average ? parseFloat(formData.vote_average) : 0,
+        popularity: formData.popularity ? parseFloat(formData.popularity) : 0,
+        original_language: formData.spoken_languages[0] || 'en',
+        genres: formData.genres.map((name, index) => {
+          const existing = media.genres?.find(g => g.name === name);
+          return existing ? existing : { id: Date.now() + index, name };
+        }),
+        spoken_languages: mappedLanguages,
+      } as Media;
+
       await dispatch(editMediaAsync(updatedMedia)).unwrap();
-      toast.success(`"${formData.title.trim()}" updated successfully!`, { duration: 2000 });
-      setTimeout(() => navigate(`/details/${formData.media_type}/${media.id}`), 1000);
+      toast.success(`"${formData.title.trim()}" updated successfully!`, { id: toastId });
+
+      if (posterFile) URL.revokeObjectURL(formData.poster_path);
+      if (backdropFile) URL.revokeObjectURL(formData.backdrop_path);
+
+      navigate(`/details/${formData.media_type}/${media.id}`);
     } catch (error: unknown) {
       console.error("Failed to update media:", error);
-      
       let errorMessage = 'Failed to update media. Please try again.';
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.errors) {
@@ -283,8 +298,7 @@ const EditMedia = () => {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
-      toast.error(errorMessage, { duration: 5000 });
+      toast.error(errorMessage, { id: toastId, duration: 5000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -309,6 +323,11 @@ const EditMedia = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // If they paste a URL, clear out the pending File object
+    if (name === 'poster_path') setPosterFile(null);
+    if (name === 'backdrop_path') setBackdropFile(null);
+
     if (errors[name as keyof FormData]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
@@ -435,9 +454,9 @@ const EditMedia = () => {
                 <label className="block text-gray-400 font-medium mb-2">Poster Image <span className="text-yellow-500">*</span></label>
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
                   <input name="poster_path" type="text" className={`flex-1 p-3 bg-gray-900 border ${errors.poster_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.poster_path} onChange={handleInputChange} />
-                  <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     Upload File
-                    <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'poster_path')} />
+                    <input type="file" accept="image/*" className="hidden" disabled={isSubmitting} onChange={(e) => handleFileUpload(e, 'poster_path')} />
                   </label>
                 </div>
                 {errors.poster_path && <p className="text-red-500 text-sm mt-1">{errors.poster_path}</p>}
@@ -450,9 +469,9 @@ const EditMedia = () => {
                 <label className="block text-gray-400 font-medium mb-2">Background Cover (Optional)</label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input name="backdrop_path" type="text" className={`flex-1 p-3 bg-gray-900 border ${errors.backdrop_path ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg`} value={formData.backdrop_path} onChange={handleInputChange} />
-                  <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <label className={`cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center whitespace-nowrap shadow-sm ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     Upload File
-                    <input type="file" accept="image/*" className="hidden" disabled={isUploadingImage} onChange={(e) => handleFileUpload(e, 'backdrop_path')} />
+                    <input type="file" accept="image/*" className="hidden" disabled={isSubmitting} onChange={(e) => handleFileUpload(e, 'backdrop_path')} />
                   </label>
                 </div>
                 {errors.backdrop_path && <p className="text-red-500 text-sm mt-1">{errors.backdrop_path}</p>}
@@ -461,8 +480,8 @@ const EditMedia = () => {
 
           <div className="flex justify-end pt-4 border-t border-gray-800 mt-4">
             <button type="button" onClick={() => navigate(-1)} className="px-8 py-4 rounded-xl font-bold text-gray-400 hover:text-white mr-4 transition-colors">Cancel</button>
-            <button type="submit" disabled={isSubmitting || isUploadingImage} className="bg-yellow-500 text-black px-10 py-4 rounded-xl font-bold text-lg hover:bg-yellow-400 disabled:opacity-50 transition-all">
-              {isSubmitting ? 'Saving...' : isUploadingImage ? 'Uploading Image...' : 'Update Media Database'}
+            <button type="submit" disabled={isSubmitting} className="bg-yellow-500 text-black px-10 py-4 rounded-xl font-bold text-lg hover:bg-yellow-400 disabled:opacity-50 transition-all">
+              {isSubmitting ? 'Uploading & Saving...' : 'Update Media Database'}
             </button>
           </div>
         </form>
