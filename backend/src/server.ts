@@ -1,52 +1,51 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config(); 
+
+import app from './app';
 import { initializeDatabase } from './config/initDb';
-import cookieParser from 'cookie-parser';
+import pool from './config/db'; 
 
-import mediaRoutes from './routes/media.routes';
-import authRoutes from './routes/auth.routes';
-import favoritesRoutes from './routes/favorites.routes';
-import uploadRoutes from './routes/upload.routes';
-import userRoutes from './routes/user.routes'
-
-
-dotenv.config();
-
-const app = express();
 const PORT = process.env.PORT || 5000;
+let server: any;
 
-
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
-app.use(cookieParser());
-app.use(express.json());
-
-
-
-// Routes
-app.use('/api/media', mediaRoutes);
-app.use('/api/auth', authRoutes); 
-app.use('/api/favorites', favoritesRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/user', userRoutes);
-
-
-
-// Wrap the startup logic in an async function
 const startServer = async () => {
   try {
-    // 1. Check/Create database tables FIRST
     console.log('Connecting to database and verifying schema...');
     await initializeDatabase();
     
-    // 2. Start the server ONLY if the database is ready
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(` Server is running on http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error(' Failed to start server due to database initialization error:', error);
-    process.exit(1); // Stop the Node process entirely if the DB is broken
+    process.exit(1); 
   }
 };
 
 startServer();
+
+// ==========================================
+// GRACEFUL SHUTDOWN LOGIC
+// ==========================================
+const shutdown = async (signal: string) => {
+  console.log(`\n Received ${signal}. Shutting down gracefully...`);
+  
+  if (server) {
+    server.close(async () => {
+      console.log(' HTTP server closed.');
+      try {
+        await pool.end(); 
+        console.log(' Database pool closed.');
+        process.exit(0);
+      } catch (err) {
+        console.error(' Error during database disconnection:', err);
+        process.exit(1);
+      }
+    });
+  } else {
+    process.exit(0);
+  }
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

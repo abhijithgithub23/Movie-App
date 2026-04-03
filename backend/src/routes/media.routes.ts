@@ -10,7 +10,7 @@ import {
   deleteMediaController 
 } from '../controllers/media.controller';
 import { validate } from '../middleware/validate.middleware';
-import { protect, admin } from '../middleware/auth.middleware';
+import { protect, authorizeRole } from '../middleware/auth.middleware';
 
 import { 
   addMediaSchema, 
@@ -28,11 +28,11 @@ router.get('/tv', getTvShows);
 
 router.get('/search', validate(searchQuerySchema), searchMediaController);
 
-router.post('/', validate(addMediaSchema), protect, admin, addMedia);
+router.post('/', validate(addMediaSchema), protect, authorizeRole('admin'), addMedia);
 
-router.put('/:id', validate(updateMediaSchema),protect, admin, editMediaController);
+router.put('/:id', validate(updateMediaSchema),protect, authorizeRole('admin'), editMediaController);
 
 router.get('/:type/:id', validate(mediaIdParamSchema), getMediaDetails);
-router.delete('/:id', validate(mediaIdParamSchema), protect, admin, deleteMediaController);
+router.delete('/:id', validate(mediaIdParamSchema), protect, authorizeRole('admin'), deleteMediaController);
 
 export default router;

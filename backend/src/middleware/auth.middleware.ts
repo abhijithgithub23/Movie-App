@@ -1,77 +1,91 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import pool from '../config/db'; // Import your database pool to check admin status
+import { findUserByIdDB } from '../repositories/auth.repository';
 
-// Extend Express Request to include our user payload
+// 1. FAIL-FAST ENV CHECK: Do this once at startup, not on every request.
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL ERROR: JWT_SECRET is not defined in the environment.');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// 2. STRICT TYPING: Define exactly what our token payload looks like
+interface CustomJwtPayload extends JwtPayload {
+  id: number;
+}
+
+// Extend Express Request to include our user payload and role
 declare global {
   namespace Express {
     interface Request {
-      user?: { id: number };
+      user?: { 
+        id: number;
+        isAdmin?: boolean; 
+      };
     }
   }
 }
 
 export const protect = (req: Request, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ message: 'Not authorized, no token provided' });
-    return;
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  // Explicitly check if the token exists to satisfy TypeScript
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, malformed token' });
-    return;
-  }
-
   try {
-    const secret = process.env.JWT_SECRET!;
+    const authHeader = req.headers.authorization;
     
-    // Now TypeScript knows for a fact that both 'token' and 'secret' are strings
-    const decoded = jwt.verify(token, secret) as JwtPayload;
-    
-    // Safely assign the ID to the request
-    if (decoded && decoded.id) {
-      req.user = { id: decoded.id as number };
-      next();
-    } else {
-      res.status(401).json({ message: 'Not authorized, invalid token payload' });
+    // We intentionally use Bearer tokens here, not cookies, as part of our dual-token strategy.
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
     }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as CustomJwtPayload;
+    
+    req.user = { id: decoded.id };
+    next();
   } catch (error) {
-    res.status(401).json({ message: 'Not authorized, token failed' });
+    // Log the actual error internally for debugging, but give the client a generic response
+    console.warn(` Auth Alert: Token verification failed.`, error);
+    res.status(401).json({ message: 'Unauthorized' });
   }
 };
 
-export const admin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    // 1. Ensure the protect middleware actually ran first and attached the user ID
-    if (!req.user || !req.user.id) {
-      res.status(401).json({ message: 'Not authorized, user ID missing' });
-      return;
-    }
+// 3. COMPOSABLE MIDDLEWARE: A factory function that generates authorization middleware
+export const authorizeRole = (requiredRole: 'admin' | 'user') => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
 
-    // 2. Query the database to get the absolute latest admin status
-    const { rows } = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-    
-    if (rows.length === 0) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
+      // 4. CLEANER LOGIC: Use the repository layer instead of writing raw SQL in middleware
+      const user = await findUserByIdDB(req.user.id);
+      
+      if (!user) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
 
-    const user = rows[0];
+      const isUserAdmin = user.is_admin === true;
 
-    // 3. Check the flag
-    if (user.is_admin) {
-      next(); // VIP Access Granted! Pass to the controller.
-    } else {
-      // 403 Forbidden: The server understands the request, but refuses to authorize it.
-      res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+      // Check if they meet the required role
+      if (requiredRole === 'admin' && !isUserAdmin) {
+        console.warn(` Security Alert: User ${req.user.id} attempted to access an admin route.`);
+        res.status(403).json({ message: 'Forbidden: Insufficient privileges' });
+        return;
+      }
+
+      // Attach the role to the request in case downstream controllers need it
+      req.user.isAdmin = isUserAdmin;
+      
+      next(); // Passed all checks!
+    } catch (error) {
+      console.error('Authorization middleware error:', error);
+      res.status(500).json({ message: 'Internal Server Error' });
     }
-  } catch (error) {
-    console.error('Admin middleware error:', error);
-    res.status(500).json({ message: 'Server error checking admin status' });
-  }
+  };
 };
