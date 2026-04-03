@@ -10,6 +10,8 @@ import {
   deleteMediaController 
 } from '../controllers/media.controller';
 import { validate } from '../middleware/validate.middleware';
+import { protect, admin } from '../middleware/auth.middleware';
+
 import { 
   addMediaSchema, 
   updateMediaSchema, 
@@ -17,23 +19,20 @@ import {
   searchQuerySchema 
 } from '../schemas/media.schema';
 
+
 const router = express.Router();
 
 router.get('/trending', getTrending);
 router.get('/movies', getMovies);
 router.get('/tv', getTvShows);
 
-// Validate Queries
 router.get('/search', validate(searchQuerySchema), searchMediaController);
 
-// Validate Body
-router.post('/', validate(addMediaSchema), addMedia);
+router.post('/', validate(addMediaSchema), protect, admin, addMedia);
 
-// Validate Params AND Body
-router.put('/:id', validate(updateMediaSchema), editMediaController);
+router.put('/:id', validate(updateMediaSchema),protect, admin, editMediaController);
 
-// Validate Params
 router.get('/:type/:id', validate(mediaIdParamSchema), getMediaDetails);
-router.delete('/:id', validate(mediaIdParamSchema), deleteMediaController);
+router.delete('/:id', validate(mediaIdParamSchema), protect, admin, deleteMediaController);
 
 export default router;

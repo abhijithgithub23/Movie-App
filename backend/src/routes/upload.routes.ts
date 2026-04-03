@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { uploadImage } from '../controllers/upload.controller';
-import { protect } from '../middleware/auth.middleware';
+import { protect , admin} from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -13,6 +13,6 @@ const upload = multer({
 });
 
 // POST /api/upload - Protected so only logged-in users can upload
-router.post('/', protect, upload.single('image'), uploadImage);
+router.post('/', protect, admin,  upload.single('image'), uploadImage);
 
 export default router;

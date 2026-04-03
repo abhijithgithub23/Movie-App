@@ -12,7 +12,6 @@ export const validate = (schema: ZodSchema) =>
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        // Zod 4 uses .issues instead of .errors
         const formattedErrors = error.issues.map((err: ZodIssue) => ({
           field: err.path.join('.'),
           message: err.message
