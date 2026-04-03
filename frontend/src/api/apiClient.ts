@@ -4,7 +4,7 @@ import { setCredentials, logoutUser } from '../features/auth/authSlice';
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:5000/api',
-  withCredentials: true, // Crucial for auth, harmless for public routes
+  withCredentials: true, 
 });
 
 // Request Interceptor: Attach Access Token if it exists

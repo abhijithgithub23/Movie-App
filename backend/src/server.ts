@@ -8,7 +8,7 @@ import mediaRoutes from './routes/media.routes';
 import authRoutes from './routes/auth.routes';
 import favoritesRoutes from './routes/favorites.routes';
 import uploadRoutes from './routes/upload.routes';
-import userRoutes from './routes/user.routes';
+import userRoutes from './routes/user.routes'
 
 
 dotenv.config();
@@ -41,13 +41,12 @@ const startServer = async () => {
     
     // 2. Start the server ONLY if the database is ready
     app.listen(PORT, () => {
-      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+      console.log(` Server is running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server due to database initialization error:', error);
+    console.error(' Failed to start server due to database initialization error:', error);
     process.exit(1); // Stop the Node process entirely if the DB is broken
   }
 };
 
-// Execute the startup sequence
 startServer();

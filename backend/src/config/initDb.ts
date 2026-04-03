@@ -1,4 +1,4 @@
-import pool from './db'; // Adjust path if needed
+import pool from './db'; 
 
 export const initializeDatabase = async () => {
   try {
@@ -16,12 +16,12 @@ export const initializeDatabase = async () => {
 
     // 2. If it exists, print a success message and stop.
     if (tableExists) {
-      console.log('✅ Database schema already exists. No new tables created.');
+      console.log(' Database schema already exists. No new tables created.');
       return; 
     }
 
     // 3. If it does NOT exist, print an alert and run the build script
-    console.log('⚠️ Database tables not found. Creating schema now...');
+    console.log(' Database tables not found. Creating schema now...');
 
     const schemaQuery = `
       -- 1. GENRES TABLE
@@ -29,6 +29,15 @@ export const initializeDatabase = async () => {
           id INTEGER PRIMARY KEY,
           name VARCHAR(100) NOT NULL
       );
+
+      -- Seed initial genres (Idempotent: won't crash if they already exist)
+      INSERT INTO genres (id, name) VALUES
+      (28,'Action'), (12,'Adventure'), (16,'Animation'), (35,'Comedy'),
+      (80,'Crime'), (18,'Drama'), (10751,'Family'), (14,'Fantasy'),
+      (36,'History'), (27,'Horror'), (10402,'Music'), (9648,'Mystery'),
+      (10749,'Romance'), (878,'Science Fiction'), (53,'Thriller'),
+      (10752,'War'), (37,'Western')
+      ON CONFLICT (id) DO NOTHING;
 
       -- 2. UNIFIED MEDIA TABLE
       CREATE TABLE IF NOT EXISTS media (
@@ -80,15 +89,15 @@ export const initializeDatabase = async () => {
       );
 
       -- 4. USERS TABLE
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                email VARCHAR(100) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                is_admin BOOLEAN DEFAULT FALSE,      -- NEW
-                profile_pic TEXT,                    -- NEW
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+      CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          is_admin BOOLEAN DEFAULT FALSE,
+          profile_pic TEXT,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
 
       -- 5. FAVORITES TABLE
       CREATE TABLE IF NOT EXISTS user_favorites (
@@ -100,10 +109,10 @@ export const initializeDatabase = async () => {
     `;
 
     await pool.query(schemaQuery);
-    console.log('🚀 Database schema created successfully!');
+    console.log(' Database schema created successfully!');
 
   } catch (error) {
-    console.error('❌ Error initializing database tables:', error);
+    console.error(' Error initializing database tables:', error);
     throw error; 
   }
 };
