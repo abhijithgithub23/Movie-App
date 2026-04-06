@@ -28,11 +28,11 @@ router.get('/tv', getTvShows);
 
 router.get('/search', validate(searchQuerySchema), searchMediaController);
 
-router.post('/', validate(addMediaSchema), protect, authorizeRole('admin'), addMedia);
+router.post('/',protect, authorizeRole('admin'), validate(addMediaSchema),  addMedia);
 
-router.put('/:id', validate(updateMediaSchema),protect, authorizeRole('admin'), editMediaController);
+router.put('/:id',protect, authorizeRole('admin'), validate(updateMediaSchema), editMediaController);
 
-router.get('/:type/:id', validate(mediaIdParamSchema), getMediaDetails);
-router.delete('/:id', validate(mediaIdParamSchema), protect, authorizeRole('admin'), deleteMediaController);
+router.get('/:type/:id', getMediaDetails);
+router.delete('/:id', protect, authorizeRole('admin'), validate(mediaIdParamSchema), deleteMediaController);
 
 export default router;

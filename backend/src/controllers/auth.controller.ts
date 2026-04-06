@@ -1,141 +1,90 @@
-import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import pool from '../config/db';
+import { Request, Response, CookieOptions } from 'express';
+import rateLimit from 'express-rate-limit';
+import { registerUser, authenticateUser, refreshUserToken } from '../services/auth.service';
 
+const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
-export const JWT_SECRET = process.env.JWT_SECRET;
-export const REFRESH_SECRET = process.env.REFRESH_SECRET;
-
-if (!JWT_SECRET || !REFRESH_SECRET) {
-  throw new Error('Missing required environment variables');
-}
-
-const generateTokens = (userId: number) => {
-  const accessToken = jwt.sign({ id: userId }, JWT_SECRET , { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: userId }, REFRESH_SECRET , { expiresIn: '7d' });
-  return { accessToken, refreshToken };
-};
-
-// Standardized cookie options for reuse
-const cookieOptions = {
+const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production', 
-  sameSite: 'strict' as const,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/',
+};
+
+// export const loginLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, 
+//   max: 5, 
+//   message: { message: 'Too many login attempts, please try again after 15 minutes' },
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
+
+const sendAuthResponse = (res: Response, statusCode: number, user: any, accessToken: string, refreshToken: string) => {
+  res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: SEVEN_DAYS });
+  res.status(statusCode).json({ user, accessToken });
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password } = req.body;
+    const { user, accessToken, refreshToken } = await registerUser(req.body);
 
-    const userCheck = await pool.query('SELECT * FROM users WHERE email = $1 OR username = $2', [email, username]);
-    if (userCheck.rows.length > 0) {
+    console.info(`[AUTH] New user registered: ${user.email} (ID: ${user.id})`);
+    sendAuthResponse(res, 201, user, accessToken, refreshToken);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'USER_EXISTS') {
+      console.warn(`[AUTH] Registration failed: User already exists (${req.body.email})`);
       res.status(400).json({ message: 'User already exists' });
       return;
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-    const isAdmin = email === 'abhijithksd23@gmail.com';
-    
-    const newUser = await pool.query(
-      `INSERT INTO users (username, email, password_hash, is_admin) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING id, username, email, is_admin, profile_pic`,
-      [username, email, passwordHash, isAdmin]
-    );
-
-    const user = newUser.rows[0];
-    const { accessToken, refreshToken } = generateTokens(user.id);
-
-    // Set Refresh Token in HTTP-Only Cookie
-    res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
-
-    // Send User and Access Token in the JSON response
-    res.status(201).json({ user, accessToken });
-  } catch (error) {
-    console.error('Registration error:', error);
+    console.error('[AUTH] Server error during registration:', error);
     res.status(500).json({ message: 'Server error during registration' });
   }
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { user, accessToken, refreshToken } = await authenticateUser(req.body);
 
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
-
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    console.info(`[AUTH] User logged in: ${user.email} (ID: ${user.id})`);
+    sendAuthResponse(res, 200, user, accessToken, refreshToken);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'INVALID_CREDENTIALS') {
+      console.warn(`[AUTH] Failed login attempt for email: ${req.body.email}`);
       res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
-
-    const { accessToken, refreshToken } = generateTokens(user.id);
-
-    // Set Refresh Token in HTTP-Only Cookie
-    res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-
-    // Send User and Access Token in the JSON response (excluding password hash)
-    const { password_hash, ...userWithoutSensitiveData } = user;
-    res.status(200).json({ user: userWithoutSensitiveData, accessToken });
-  } catch (error) {
-    console.error('LOGIN ERROR:', error);
+    console.error('[AUTH] Server error during login:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };
 
 export const refresh = async (req: Request, res: Response): Promise<void> => {
   const cookies = req.cookies;
-  if (!cookies?.jwt) {
+  
+  if (!cookies || typeof cookies.jwt !== 'string') {
+    console.warn(`[AUTH] Refresh attempted without valid JWT cookie`);
     res.status(401).json({ message: 'Unauthorized - No Refresh Token' });
     return;
   }
 
-  const refreshToken = cookies.jwt;
-
-  // console.log("🟡 OLD REFRESH TOKEN:", refreshToken);
-
-  jwt.verify(refreshToken, REFRESH_SECRET, async (err: any, decoded: any) => {
-    if (err) {
+  try {
+    const { user, accessToken, refreshToken } = await refreshUserToken(cookies.jwt);
+    
+    console.info(`[AUTH] Token refreshed for user ID: ${user.id}`);
+    sendAuthResponse(res, 200, user, accessToken, refreshToken);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'INVALID_TOKEN') {
+      console.warn(`[AUTH] Refresh failed: Invalid or expired token used`);
       res.status(403).json({ message: 'Forbidden - Token expired or invalid' });
       return;
     }
-
-    try {
-      const result = await pool.query(
-        'SELECT id, username, email, is_admin, profile_pic FROM users WHERE id = $1', 
-        [decoded.id]
-      );
-      
-      const user = result.rows[0];
-      
-      if (!user) {
-        res.status(404).json({ message: 'User not found' });
-        return;
-      }
-      
-      // Generate BOTH new access and refresh tokens
-      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id);
-
-      // console.log("🟢 NEW REFRESH TOKEN:", newRefreshToken);
-
-      
-      // Update the cookie with the new refresh token (Token Rotation)
-      res.cookie('jwt', newRefreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-
-  
-      // Send BOTH the user data and the new token back to rebuild the Redux state
-      res.json({ user, accessToken });
-    } catch (dbError) {
-      console.error('Database error during refresh:', dbError);
-      res.status(500).json({ message: 'Server error during token refresh' });
-    }
-  });
+    console.error('[AUTH] Server error during token refresh:', error);
+    res.status(500).json({ message: 'Server error during token refresh' });
+  }
 };
 
 export const logout = (req: Request, res: Response): void => {
-  // Clear the cookie from the browser
   res.clearCookie('jwt', cookieOptions);
+  console.info(`[AUTH] User logged out successfully`);
   res.status(200).json({ message: 'Logged out successfully' });
 };

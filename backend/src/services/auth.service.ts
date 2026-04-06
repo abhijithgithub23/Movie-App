@@ -11,7 +11,7 @@ export const JWT_SECRET = process.env.JWT_SECRET as string;
 export const REFRESH_SECRET = process.env.REFRESH_SECRET as string;
 
 if (!JWT_SECRET || !REFRESH_SECRET) {
-  throw new Error('Missing required environment variables');
+  throw new Error('Missing required environment variables for JWT');
 }
 
 const generateTokens = (userId: number) => {
@@ -20,7 +20,11 @@ const generateTokens = (userId: number) => {
   return { accessToken, refreshToken };
 };
 
-export const registerUser = async (userData: any) => {
+// Define types for service inputs
+interface RegisterData { username: string; email: string; password: string; }
+interface LoginData { email: string; password: string; }
+
+export const registerUser = async (userData: RegisterData) => {
   const { username, email, password } = userData;
 
   const existingUser = await findUserByEmailOrUsernameDB(email, username);
@@ -36,7 +40,7 @@ export const registerUser = async (userData: any) => {
   return { user, ...tokens };
 };
 
-export const authenticateUser = async (credentials: any) => {
+export const authenticateUser = async (credentials: LoginData) => {
   const { email, password } = credentials;
 
   const user = await findUserByEmailDB(email);
@@ -45,6 +49,8 @@ export const authenticateUser = async (credentials: any) => {
   }
 
   const tokens = generateTokens(user.id);
+  
+  // Strip sensitive data before sending it up to the controller
   const { password_hash, ...safeUser } = user;
   
   return { user: safeUser, ...tokens };
@@ -52,7 +58,7 @@ export const authenticateUser = async (credentials: any) => {
 
 export const refreshUserToken = async (refreshToken: string) => {
   try {
-    // jwt.verify acts synchronously when no callback is provided
+    // jwt.verify throws an error if the token is invalid or expired
     const decoded = jwt.verify(refreshToken, REFRESH_SECRET) as { id: number };
     
     const user = await findUserByIdDB(decoded.id);

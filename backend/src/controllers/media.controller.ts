@@ -96,7 +96,6 @@ export const searchMediaController = async (req: Request, res: Response): Promis
 
 export const addMedia = async (req: Request, res: Response): Promise<void> => {
   try {
-    // FIX: Type the incoming request body
     const mediaData: MediaInsertDTO = req.body;
     
     const newMedia = await createMedia(mediaData);

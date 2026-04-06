@@ -17,7 +17,7 @@ export interface MediaInsertDTO {
   number_of_seasons?: number;
   number_of_episodes?: number;
   vote_average?: number;
-  popularity?: number; // NEW: Added popularity to interface
+  popularity?: number;
   original_language?: string;
   genres?: { id: number; name: string }[];
   spoken_languages?: { iso_639_1: string; english_name: string; name: string }[];
@@ -50,10 +50,7 @@ export const searchMedia = async (query: string, filters: any) => {
   return { results }; 
 };
 
-export const createMedia = async (mediaData: MediaInsertDTO) => {
-  if (!mediaData.type || !mediaData.overview) {
-    throw new Error('Type and Overview are strictly required.');
-  }
+export const createMedia = async (mediaData: MediaInsertDTO) => { 
   return await mediaRepository.insertMedia(mediaData);
 };
 
@@ -76,28 +73,29 @@ const deleteFromCloudinary = async (url: string) => {
 };
 
 export const updateMedia = async (id: number, mediaData: MediaInsertDTO) => {
-  // 1. Get the existing media to check if images changed
+
   const oldMedia = await mediaRepository.getMediaDetailsDB(mediaData.type, id);
+
   if (!oldMedia) throw new Error('Media not found');
 
-  // 2. If the user uploaded a NEW poster/backdrop, delete the OLD ones from Cloudinary to save space
+
+  const updatedMedia = await mediaRepository.updateMediaDB(id, mediaData);
+
   if (oldMedia.poster_path && oldMedia.poster_path !== mediaData.poster_path) {
-    await deleteFromCloudinary(oldMedia.poster_path);
+
+    deleteFromCloudinary(oldMedia.poster_path);
   }
   if (oldMedia.backdrop_path && oldMedia.backdrop_path !== mediaData.backdrop_path) {
-    await deleteFromCloudinary(oldMedia.backdrop_path);
+    deleteFromCloudinary(oldMedia.backdrop_path);
   }
 
-  // 3. Update the database
-  return await mediaRepository.updateMediaDB(id, mediaData);
+  return updatedMedia;
 };
 
 export const deleteMediaRecord = async (id: number) => {
-  // 1. Delete from Postgres and get the image URLs back
   const deletedRecord = await mediaRepository.deleteMediaDB(id);
   
   if (deletedRecord) {
-    // 2. Erase the images from Cloudinary!
     if (deletedRecord.poster_path) await deleteFromCloudinary(deletedRecord.poster_path);
     if (deletedRecord.backdrop_path) await deleteFromCloudinary(deletedRecord.backdrop_path);
   }
