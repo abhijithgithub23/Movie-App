@@ -3,6 +3,20 @@ import {
   searchMediaDB, insertMedia, updateMediaDB, deleteMediaDB 
 } from '../repositories/media.repository';
 import cloudinary from '../config/cloudinary';
+// CRITICAL: Import your exact Drizzle schema type!
+import type { Media } from '../db/schema';
+
+// 1. A strictly typed replacement for 'any' on complex JSON structures
+export type SafeJson = Record<string, unknown> | unknown[] | null;
+
+// 2. Define the exact shape of your search filters
+export interface SearchFilters {
+  mediaType?: string;
+  year?: string;
+  rating?: number;
+  language?: string;
+  genre?: number;
+}
 
 export interface MediaInsertDTO {
   type: 'movie' | 'tv';
@@ -23,16 +37,16 @@ export interface MediaInsertDTO {
   genres?: { id: number; name: string }[];
   spoken_languages?: { iso_639_1: string; english_name: string; name: string }[];
   
-  // Added the missing deep JSON fields here so they pass validation
-  credits?: any;
-  seasons?: any;
-  networks?: any;
-  production_companies?: any;
-  production_countries?: any;
-  created_by?: any;
+  // Replaced 'any' with 'SafeJson'
+  credits?: SafeJson;
+  seasons?: SafeJson;
+  networks?: SafeJson;
+  production_companies?: SafeJson;
+  production_countries?: SafeJson;
+  created_by?: SafeJson;
 }
 
-// 1. Map frontend snake_case to database camelCase for INSERTS/UPDATES
+// Map frontend snake_case to database camelCase for INSERTS/UPDATES
 const mapDtoToDbModel = (dto: MediaInsertDTO) => ({
   type: dto.type,
   title: dto.title,
@@ -51,7 +65,6 @@ const mapDtoToDbModel = (dto: MediaInsertDTO) => ({
   genres: dto.genres,
   spokenLanguages: dto.spoken_languages,
   
-  // Added mapping for inserts/updates
   credits: dto.credits,
   seasons: dto.seasons,
   networks: dto.networks,
@@ -60,15 +73,15 @@ const mapDtoToDbModel = (dto: MediaInsertDTO) => ({
   createdBy: dto.created_by,
 });
 
-// 2. Map database camelCase back to frontend snake_case for FETCHING
-const mapDbModelToFrontendDto = (dbMedia: any) => {
+// 3. Replaced 'dbMedia: any' with 'dbMedia: Media | null | undefined'
+const mapDbModelToFrontendDto = (dbMedia: Media | null | undefined) => {
   if (!dbMedia) return dbMedia;
   return {
     ...dbMedia,
-    id: dbMedia.tmdbId,             // CRITICAL: Frontend needs tmdbId to be named 'id'
-    media_type: dbMedia.type,       // CRITICAL: Frontend needs type to be named 'media_type'
+    id: dbMedia.tmdbId,             
+    media_type: dbMedia.type,       
     original_name: dbMedia.originalName,
-    name: dbMedia.originalName,     // Some components map 'name' instead of 'original_name'
+    name: dbMedia.originalName,     
     poster_path: dbMedia.posterPath,
     backdrop_path: dbMedia.backdropPath,
     release_date: dbMedia.releaseDate,
@@ -109,7 +122,8 @@ export const fetchMediaDetails = async (type: string, tmdbId: number) => {
   return mapDbModelToFrontendDto(details);
 };
 
-export const searchMedia = async (query: string, filters: any) => {
+// 4. Replaced 'filters: any' with 'filters: SearchFilters'
+export const searchMedia = async (query: string, filters: SearchFilters) => {
   const results = await searchMediaDB(query, filters);
   return { results: results.map(mapDbModelToFrontendDto) }; 
 };

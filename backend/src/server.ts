@@ -1,12 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config(); 
-
+import { Server } from 'http';
 import app from './app';
 import { initializeDatabase } from './config/initDb';
 import pool from './config/db'; 
 
 const PORT = process.env.PORT || 5000;
-let server: any;
+let server: Server;
 
 const startServer = async () => {
   try {

@@ -20,15 +20,25 @@ const generateTokens = (userId: number) => {
   return { accessToken, refreshToken };
 };
 
-// ADAPTER: Maps Drizzle's camelCase back to the Frontend's snake_case
-const formatUserForFrontend = (user: any) => {
-  // We extract the sensitive hash and the camelCase fields
-  const { passwordHash, isAdmin, profilePic, createdAt, ...rest } = user;
+// 1. Define the interface here so the Service is the source of truth
+export interface FrontendUser {
+  id: number;
+  username: string;
+  email: string;
+  is_admin: boolean | null;
+  profile_pic: string | null;
+  created_at: Date | null;
+}
+
+// 2. EXPLICITLY set the return type to ': FrontendUser'
+const formatUserForFrontend = (user: any): FrontendUser => {
   return {
-    ...rest,
-    is_admin: isAdmin,
-    profile_pic: profilePic, // This fixes the Navbar image!
-    created_at: createdAt
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    is_admin: user.isAdmin,
+    profile_pic: user.profilePic, 
+    created_at: user.createdAt
   };
 };
 
@@ -61,7 +71,6 @@ export const registerUser = async (userData: RegisterData) => {
 
   const tokens = generateTokens(user.id);
   
-  // Format the user before sending to controller
   return { user: formatUserForFrontend(user), ...tokens };
 };
 
@@ -76,7 +85,6 @@ export const authenticateUser = async (credentials: LoginData) => {
 
   const tokens = generateTokens(user.id);
   
-  // Format the user before sending to controller
   return { user: formatUserForFrontend(user), ...tokens };
 };
 
@@ -90,7 +98,6 @@ export const refreshUserToken = async (refreshToken: string) => {
     
     const tokens = generateTokens(user.id);
     
-    // Format the user before sending to controller
     return { user: formatUserForFrontend(user), ...tokens };
   } catch (error) {
     throw new Error('INVALID_TOKEN');

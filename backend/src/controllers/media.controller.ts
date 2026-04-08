@@ -1,14 +1,16 @@
 import { Request, Response } from 'express';
-import { fetchTrendingMedia,
-          fetchMovies,
-           fetchTvShows,
-            fetchMediaDetails,
-             searchMedia,
-              createMedia,
-               MediaInsertDTO,
-                updateMedia,
-                 deleteMediaRecord } from '../services/media.service';
-
+import { 
+  fetchTrendingMedia,
+  fetchMovies,
+  fetchTvShows,
+  fetchMediaDetails,
+  searchMedia,
+  createMedia,
+  MediaInsertDTO,
+  SearchFilters, 
+  updateMedia,
+  deleteMediaRecord 
+} from '../services/media.service';
 
 export const getTrending = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -78,13 +80,14 @@ export const searchMediaController = async (req: Request, res: Response): Promis
       return;
     }
 
-    const filters = {
-      mediaType: mediaType as string,
-      year: year as string,
-      rating: rating ? Number(rating) : 0,
-      language: language as string,
-      genre: genre ? Number(genre) : null
-    };
+    // CRITICAL FIX: Dynamically build the object to satisfy exactOptionalPropertyTypes
+    const filters: SearchFilters = {};
+    
+    if (mediaType) filters.mediaType = mediaType as string;
+    if (year) filters.year = year as string;
+    if (rating) filters.rating = Number(rating);
+    if (language) filters.language = language as string;
+    if (genre) filters.genre = Number(genre);
 
     const data = await searchMedia(query as string, filters);
     res.status(200).json(data);
@@ -101,10 +104,9 @@ export const addMedia = async (req: Request, res: Response): Promise<void> => {
     const newMedia = await createMedia(mediaData);
     
     res.status(201).json(newMedia);
-  } catch (error: unknown) { // FIX: Replaced 'any' with 'unknown'
+  } catch (error: unknown) { 
     console.error('Error adding media:', error);
     
-    // Safely extract the error message
     let errorMessage = 'Server error creating media';
     if (error instanceof Error) {
       errorMessage = error.message;
@@ -116,7 +118,6 @@ export const addMedia = async (req: Request, res: Response): Promise<void> => {
 
 export const editMediaController = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Explicitly casting as string fixes the TypeScript error!
     const id = parseInt(req.params.id as string, 10);
     const mediaData: MediaInsertDTO = req.body;
     
@@ -132,7 +133,6 @@ export const editMediaController = async (req: Request, res: Response): Promise<
 
 export const deleteMediaController = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Explicitly casting as string fixes the TypeScript error!
     const id = parseInt(req.params.id as string, 10);
     
     await deleteMediaRecord(id);

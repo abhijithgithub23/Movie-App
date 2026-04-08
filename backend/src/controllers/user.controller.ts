@@ -1,8 +1,19 @@
 import { Request, Response } from 'express';
 import { updateUserProfile } from '../services/user.service';
 
-export const updateProfileController = async (req: Request, res: Response): Promise<void> => {
+// 1. Define the exact shape we expect the frontend to send
+export interface UpdateProfileBody {
+  username: string;
+  profile_pic: string | null;
+}
+
+// 2. Pass the interface into the Request generic (Params, ResBody, ReqBody)
+export const updateProfileController = async (
+  req: Request<unknown, unknown, UpdateProfileBody>, 
+  res: Response
+): Promise<void> => {
   try {
+    // Note: req.user is populated by your auth middleware
     const userId = req.user?.id;
     
     if (!userId) {
@@ -10,7 +21,8 @@ export const updateProfileController = async (req: Request, res: Response): Prom
       return;
     }
 
-    // CRITICAL FIX: The frontend sends 'profile_pic', so we must map it to 'profilePic' here
+    // Because of the generic above, req.body is no longer 'any'.
+    // 'username' is strictly a string, and 'profilePic' is string | null!
     const { username, profile_pic: profilePic } = req.body;
     
     const updatedUser = await updateUserProfile(userId, username, profilePic);
@@ -21,7 +33,7 @@ export const updateProfileController = async (req: Request, res: Response): Prom
     }
 
     res.status(200).json(updatedUser);
-  } catch (error) {
+  } catch (error: unknown) { // 3. Explicitly mark error as 'unknown' instead of 'any'
     console.error('[USER] Error updating profile:', error);
     
     let errorMessage = 'Server error updating profile';

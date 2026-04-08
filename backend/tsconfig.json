@@ -1,53 +1,30 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
-
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
+    // --- Environment & Modules ---
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "isolatedModules": true,
     
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    // --- File Layout ---
+    "rootDir": "./src",
+    "outDir": "./dist",
 
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-
-    // Stricter Typechecking Options
+    // --- Strict Typechecking (Your excellent settings!) ---
+    "strict": true,
+    "noImplicitAny": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
+    // --- Node.js Globals ---
+    "types": ["node"], // CRITICAL FIX: Allows TS to understand process.env, __dirname, etc.
 
-    // Recommended Options
-    "jsx": "react-jsx",
-    // "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    
-
-
-
-    "target": "ES2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true
-  }
+    // --- Performance & Output ---
+    "sourceMap": true,
+    "skipLibCheck": true, // Speeds up builds by skipping checking inside node_modules
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

@@ -1,6 +1,6 @@
 import { Request, Response, CookieOptions } from 'express';
-import rateLimit from 'express-rate-limit';
-import { registerUser, authenticateUser, refreshUserToken } from '../services/auth.service';
+// Import the FrontendUser interface from the service!
+import { registerUser, authenticateUser, refreshUserToken, FrontendUser } from '../services/auth.service';
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
@@ -11,22 +11,20 @@ const cookieOptions: CookieOptions = {
   path: '/',
 };
 
-// export const loginLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, 
-//   max: 5, 
-//   message: { message: 'Too many login attempts, please try again after 15 minutes' },
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
-
-
-const sendAuthResponse = (res: Response, statusCode: number, user: any, accessToken: string, refreshToken: string) => {
+const sendAuthResponse = (
+  res: Response, 
+  statusCode: number, 
+  user: FrontendUser, // Safely typed!
+  accessToken: string, 
+  refreshToken: string
+) => {
   res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: SEVEN_DAYS });
   res.status(statusCode).json({ user, accessToken });
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
+    // If you hover over 'user' here now, it will say 'FrontendUser' instead of 'any'!
     const { user, accessToken, refreshToken } = await registerUser(req.body);
 
     console.info(`[AUTH] New user registered: ${user.email} (ID: ${user.id})`);
@@ -44,6 +42,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
+    // If you hover over 'user' here now, it will say 'FrontendUser'!
     const { user, accessToken, refreshToken } = await authenticateUser(req.body);
 
     console.info(`[AUTH] User logged in: ${user.email} (ID: ${user.id})`);
@@ -69,6 +68,7 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    // If you hover over 'user' here now, it will say 'FrontendUser'!
     const { user, accessToken, refreshToken } = await refreshUserToken(cookies.jwt);
     
     console.info(`[AUTH] Token refreshed for user ID: ${user.id}`);
