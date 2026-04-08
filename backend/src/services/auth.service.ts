@@ -20,9 +20,28 @@ const generateTokens = (userId: number) => {
   return { accessToken, refreshToken };
 };
 
-// Define types for service inputs
-interface RegisterData { username: string; email: string; password: string; }
-interface LoginData { email: string; password: string; }
+// ADAPTER: Maps Drizzle's camelCase back to the Frontend's snake_case
+const formatUserForFrontend = (user: any) => {
+  // We extract the sensitive hash and the camelCase fields
+  const { passwordHash, isAdmin, profilePic, createdAt, ...rest } = user;
+  return {
+    ...rest,
+    is_admin: isAdmin,
+    profile_pic: profilePic, // This fixes the Navbar image!
+    created_at: createdAt
+  };
+};
+
+interface RegisterData { 
+  username: string; 
+  email: string; 
+  password: string; 
+}
+
+interface LoginData { 
+  email: string; 
+  password: string; 
+}
 
 export const registerUser = async (userData: RegisterData) => {
   const { username, email, password } = userData;
@@ -35,37 +54,44 @@ export const registerUser = async (userData: RegisterData) => {
   const isAdmin = email === 'abhijithksd23@gmail.com';
   
   const user = await createUserDB(username, email, passwordHash, isAdmin);
+  
+  if (!user) {
+    throw new Error('Database failed to return created user');
+  }
+
   const tokens = generateTokens(user.id);
   
-  return { user, ...tokens };
+  // Format the user before sending to controller
+  return { user: formatUserForFrontend(user), ...tokens };
 };
 
 export const authenticateUser = async (credentials: LoginData) => {
   const { email, password } = credentials;
 
   const user = await findUserByEmailDB(email);
-  if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+  
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new Error('INVALID_CREDENTIALS');
   }
 
   const tokens = generateTokens(user.id);
   
-  // Strip sensitive data before sending it up to the controller
-  const { password_hash, ...safeUser } = user;
-  
-  return { user: safeUser, ...tokens };
+  // Format the user before sending to controller
+  return { user: formatUserForFrontend(user), ...tokens };
 };
 
 export const refreshUserToken = async (refreshToken: string) => {
   try {
-    // jwt.verify throws an error if the token is invalid or expired
     const decoded = jwt.verify(refreshToken, REFRESH_SECRET) as { id: number };
     
     const user = await findUserByIdDB(decoded.id);
+    
     if (!user) throw new Error('USER_NOT_FOUND');
     
     const tokens = generateTokens(user.id);
-    return { user, ...tokens };
+    
+    // Format the user before sending to controller
+    return { user: formatUserForFrontend(user), ...tokens };
   } catch (error) {
     throw new Error('INVALID_TOKEN');
   }

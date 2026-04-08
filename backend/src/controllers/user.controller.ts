@@ -3,24 +3,32 @@ import { updateUserProfile } from '../services/user.service';
 
 export const updateProfileController = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Assuming you send the user ID in the body or grab it from req.user if you have auth middleware
-    const { id, username, profile_pic } = req.body;
-
-    if (!id || !username) {
-      res.status(400).json({ message: 'User ID and username are required.' });
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
-    const updatedUser = await updateUserProfile(id, username, profile_pic);
+    // CRITICAL FIX: The frontend sends 'profile_pic', so we must map it to 'profilePic' here
+    const { username, profile_pic: profilePic } = req.body;
     
-    // Exclude password_hash before sending back to frontend!
-    const { password_hash, ...safeUser } = updatedUser;
+    const updatedUser = await updateUserProfile(userId, username, profilePic);
+
+    if (!updatedUser) {
+      res.status(404).json({ message: 'User not found or update failed' });
+      return;
+    }
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error('[USER] Error updating profile:', error);
     
-    res.status(200).json(safeUser);
-  } catch (error: unknown) {
-    console.error('Error updating profile:', error);
     let errorMessage = 'Server error updating profile';
-    if (error instanceof Error) errorMessage = error.message;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
     res.status(500).json({ message: errorMessage });
   }
 };

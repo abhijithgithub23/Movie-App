@@ -2,13 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { findUserByIdDB } from '../repositories/auth.repository';
 
-// 1. FAIL-FAST ENV CHECK: Do this once at startup, not on every request.
 if (!process.env.JWT_SECRET) {
   throw new Error('FATAL ERROR: JWT_SECRET is not defined in the environment.');
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// 2. STRICT TYPING: Define exactly what our token payload looks like
+//  STRICT TYPING: Define exactly what our token payload looks like
 interface CustomJwtPayload extends JwtPayload {
   id: number;
 }
@@ -29,7 +28,6 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
   try {
     const authHeader = req.headers.authorization;
     
-    // We intentionally use Bearer tokens here, not cookies, as part of our dual-token strategy.
     if (!authHeader?.startsWith('Bearer ')) {
       res.status(401).json({ message: 'Unauthorized' });
       return;
@@ -53,7 +51,6 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
   }
 };
 
-// 3. COMPOSABLE MIDDLEWARE: A factory function that generates authorization middleware
 export const authorizeRole = (requiredRole: 'admin' | 'user') => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -62,7 +59,6 @@ export const authorizeRole = (requiredRole: 'admin' | 'user') => {
         return;
       }
 
-      // 4. CLEANER LOGIC: Use the repository layer instead of writing raw SQL in middleware
       const user = await findUserByIdDB(req.user.id);
       
       if (!user) {
@@ -70,7 +66,7 @@ export const authorizeRole = (requiredRole: 'admin' | 'user') => {
         return;
       }
 
-      const isUserAdmin = user.is_admin === true;
+      const isUserAdmin = user.isAdmin === true;
 
       // Check if they meet the required role
       if (requiredRole === 'admin' && !isUserAdmin) {
@@ -79,10 +75,10 @@ export const authorizeRole = (requiredRole: 'admin' | 'user') => {
         return;
       }
 
-      // Attach the role to the request in case downstream controllers need it
+      // Attach the role to the request 
       req.user.isAdmin = isUserAdmin;
       
-      next(); // Passed all checks!
+      next(); 
     } catch (error) {
       console.error('Authorization middleware error:', error);
       res.status(500).json({ message: 'Internal Server Error' });

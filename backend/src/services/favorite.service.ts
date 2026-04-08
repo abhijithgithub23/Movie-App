@@ -6,10 +6,22 @@ import {
 } from '../repositories/favorite.repository';
 
 export const fetchUserFavorites = async (userId: number) => {
-  return await getUserFavoritesDB(userId);
+  const favorites = await getUserFavoritesDB(userId);
+  
+  // Map Drizzle's camelCase return back to the frontend's expected snake_case
+  return favorites.map(fav => ({
+    ...fav,
+    media_type: fav.mediaType,
+    original_name: fav.name,
+    poster_path: fav.posterPath,
+    release_date: fav.releaseDate,
+    first_air_date: fav.firstAirDate,
+    vote_average: fav.voteAverage,
+  }));
 };
 
 export const toggleUserFavorite = async (userId: number, media: any) => {
+  // Since we fixed media.service, media.id is correctly the TMDB ID again!
   const rawId = String(media.id).replace(/\D/g, ''); 
   const tmdbId = parseInt(rawId, 10);
   

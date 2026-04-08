@@ -24,28 +24,26 @@ const startServer = async () => {
 
 startServer();
 
-// ==========================================
-// GRACEFUL SHUTDOWN LOGIC
-// ==========================================
-const shutdown = async (signal: string) => {
-  console.log(`\n Received ${signal}. Shutting down gracefully...`);
+// SHUTDOWN LOGIC
+// const shutdown = async (signal: string) => {
+//   console.log(`\n Received ${signal}. Shutting down gracefully...`);
   
-  if (server) {
-    server.close(async () => {
-      console.log(' HTTP server closed.');
-      try {
-        await pool.end(); 
-        console.log(' Database pool closed.');
-        process.exit(0);
-      } catch (err) {
-        console.error(' Error during database disconnection:', err);
-        process.exit(1);
-      }
-    });
-  } else {
-    process.exit(0);
-  }
-};
+//   if (server) {
+//     server.close(async () => {
+//       console.log(' HTTP server closed.');
+//       try {
+//         await pool.end(); 
+//         console.log(' Database pool closed.');
+//         process.exit(0);
+//       } catch (err) {
+//         console.error(' Error during database disconnection:', err);
+//         process.exit(1);
+//       }
+//     });
+//   } else {
+//     process.exit(0);
+//   }
+// };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+// process.on('SIGINT', () => shutdown('SIGINT'));
+// process.on('SIGTERM', () => shutdown('SIGTERM'));

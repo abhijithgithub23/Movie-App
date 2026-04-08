@@ -22,10 +22,20 @@ export const updateUserProfile = async (userId: number, username: string, profil
   if (!currentUser) throw new Error('User not found');
 
   // 2. If they uploaded a NEW profile pic, delete the OLD one from Cloudinary
-  if (currentUser.profile_pic && currentUser.profile_pic !== profilePic) {
-    await deleteFromCloudinary(currentUser.profile_pic);
+  if (currentUser.profilePic && currentUser.profilePic !== profilePic) {
+    await deleteFromCloudinary(currentUser.profilePic);
   }
 
   // 3. Update the database
-  return await updateUserProfileDB(userId, username, profilePic);
+  const updatedUser = await updateUserProfileDB(userId, username, profilePic);
+
+  if (!updatedUser) return updatedUser;
+
+  // 4. Map Drizzle's camelCase back to the frontend's expected snake_case
+  return {
+    ...updatedUser,
+    profile_pic: updatedUser.profilePic, // CRITICAL: Fixes the broken image!
+    is_admin: updatedUser.isAdmin,       // CRITICAL: Keeps admin privileges working
+    created_at: updatedUser.createdAt
+  };
 };

@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
-// Helper to safely check past/present dates without crashing on empty strings
 const pastOrPresentDate = z.string().trim().nullable().optional().refine((date) => {
-  if (!date) return true; // Allow empty/null
+  if (!date) return true; // Allow empty/null 
   const parsedDate = new Date(date);
   return !isNaN(parsedDate.getTime()) && parsedDate <= new Date();
 }, 'Date cannot be in the future');
@@ -32,14 +31,48 @@ const mediaBodySchema = z.object({
   number_of_seasons: z.number().positive().optional().nullable(),
   number_of_episodes: z.number().positive().optional().nullable(),
   
-  vote_average: z.number().min(0).max(10, 'Rating must be between 0 and 10').optional().nullable(),
-  popularity: z.number().nonnegative('Popularity must be positive').optional().nullable(),
+  vote_average: z.number()
+    .min(0)
+    .max(10, 'Rating must be between 0 and 10')
+    .refine((val) => /^\d+(\.\d{1,2})?$/.test(val.toString()), 'Rating can have at most 2 decimal places')
+    .optional()
+    .nullable(),
+    
+  popularity: z.number()
+    .nonnegative('Popularity must be positive')
+    .refine((val) => /^\d+(\.\d{1,2})?$/.test(val.toString()), 'Popularity can have at most 2 decimal places')
+    .optional()
+    .nullable(),
   
   genres: z.array(z.object({ id: z.number(), name: z.string() })).min(1, 'At least one genre is required'),
   spoken_languages: z.array(z.object({ iso_639_1: z.string(), english_name: z.string(), name: z.string() })).min(1, 'At least one language is required'),
-}).refine(data => data.title || data.original_name, {
-  message: "Either title or original_name must be provided",
-  path: ["title"] // Attaches the error to the title field if both are missing
+  
+}).superRefine((data, ctx) => {
+  // 1. Cross-field validation for Title vs Original Name
+  if (!data.title && !data.original_name) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either title or original_name must be provided",
+      path: ["title"], // Attaches the error specifically to the title field in the frontend
+    });
+  }
+
+  // 2. Cross-field validation for Dates based on Media Type
+  if (data.type === 'movie' && !data.release_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Release date is required for movies",
+      path: ["release_date"],
+    });
+  }
+
+  if (data.type === 'tv' && !data.first_air_date) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "First air date is required for TV shows",
+      path: ["first_air_date"],
+    });
+  }
 });
 
 export const addMediaSchema = z.object({

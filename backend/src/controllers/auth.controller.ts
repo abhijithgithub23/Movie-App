@@ -19,6 +19,7 @@ const cookieOptions: CookieOptions = {
 //   legacyHeaders: false,
 // });
 
+
 const sendAuthResponse = (res: Response, statusCode: number, user: any, accessToken: string, refreshToken: string) => {
   res.cookie('jwt', refreshToken, { ...cookieOptions, maxAge: SEVEN_DAYS });
   res.status(statusCode).json({ user, accessToken });

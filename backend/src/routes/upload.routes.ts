@@ -5,14 +5,13 @@ import { protect , authorizeRole} from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Use memory storage so we don't clog up your server's hard drive
+// Use memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage, 
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit enforced by backend
 });
 
-// POST /api/upload - Protected so only logged-in users can upload
 router.post('/', protect, authorizeRole('admin'),  upload.single('image'), uploadImage);
 
 export default router;
