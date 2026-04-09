@@ -3,13 +3,11 @@ import { db } from '../config/db';
 import { media, mediaGenres } from '../db/schema';
 
 export const getTrendingMediaDB = async () => {
-  // Fetch top 20 movies and top 20 tv shows concurrently for maximum performance
   const [movies, tvShows] = await Promise.all([
     db.select().from(media).where(eq(media.type, 'movie')).orderBy(desc(media.popularity)).limit(20),
     db.select().from(media).where(eq(media.type, 'tv')).orderBy(desc(media.popularity)).limit(20)
   ]);
 
-  // Merge and sort in memory (sorting 40 items in V8 engine is instantly fast and saves complex SQL unions)
   return [...movies, ...tvShows].sort((a, b) => Number(b.popularity) - Number(a.popularity));
 };
 
@@ -76,9 +74,7 @@ export const searchMediaDB = async (
   if (filters.genre) {
     const targetGenres = getRelatedGenreIds(filters.genre);
     
-    // CRITICAL FIX: Pure Drizzle ORM Subquery instead of raw SQL strings.
-    // This finds all TMDB IDs in the media_genres table that match the requested genres,
-    // and ensures the main query only returns media that matches those IDs.
+    
     conditions.push(
       inArray(
         media.tmdbId,
@@ -161,7 +157,7 @@ export const updateMediaDB = async (tmdbId: number, mediaData: any) => {
       productionCountries: mediaData.productionCountries || null,
       createdBy: mediaData.createdBy || null,
 
-      updatedAt: new Date(), // Auto-update timestamp
+      updatedAt: new Date(), 
     })
     .where(eq(media.tmdbId, tmdbId))
     .returning();
@@ -170,7 +166,6 @@ export const updateMediaDB = async (tmdbId: number, mediaData: any) => {
 };
 
 export const deleteMediaDB = async (tmdbId: number) => {
-  // Specify exactly which columns to return for Cloudinary cleanup
   const result = await db.delete(media)
     .where(eq(media.tmdbId, tmdbId))
     .returning({ posterPath: media.posterPath, backdropPath: media.backdropPath });
